@@ -1,4 +1,5 @@
 import chess
+from collections import deque
 
 class ChessGame:
 
@@ -10,6 +11,9 @@ class ChessGame:
 
     def __init__(self):
         self.board = chess.Board()
+        
+        #to store history for undo functionality
+        self.move_history = deque()
 
     def display_board(self):
 
@@ -51,6 +55,23 @@ class ChessGame:
             print(f"Invalid move format: {move_str}")
             return False
 
+    def _add_to_history(self, move, previous_board):
+        self.move_history.append((move, previous_board))
+
+    def undo_move(self):
+        if not self.move_history:
+            print("No moves to undo.")
+            return False
+            
+        #undo the last move and board state
+        _, previous_board = self.move_history.pop()
+        
+        #restore the previous board state
+        self.board = previous_board
+        print("Move undone.")
+        self.display_board()
+        return True   
+ 
     def get_legal_moves(self):
         return [move.uci() for move in self.board.legal_moves]
 
@@ -69,13 +90,4 @@ class ChessGame:
             piece = self.board.piece_at(chess.parse_square(start))
             piece_symbol = self.piece_symbols.get(piece.symbol(), piece.symbol()) if piece else "?"
             print(f"{piece_symbol} {start} → {', '.join(ends)}")
-
-game = ChessGame()
-game.display_board()
-
-game.make_move("e2e4")
-
-game.make_move("d7g6")
-
-game.print_legal_moves()
 
