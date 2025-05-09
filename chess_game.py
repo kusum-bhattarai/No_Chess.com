@@ -31,15 +31,26 @@ class ChessGame:
             print(f"|{rank+1}")
         print(" +-----------------+")
         print("  a b c d e f g h")
+        
+        #for current state info
+        self.display_game_state()
 
+    def display_game_state(self):
+        #display turns
         turn = "White" if self.board.turn else "Black"
         print(f"\nCurrent turn: {turn}")
-        if self.board.is_check():
-            print("Check!")
+        
+        #special board conditions
         if self.board.is_checkmate():
-            print("Checkmate!")
-        if self.board.is_stalemate():
-            print("Stalemate!")
+            print("Checkmate! Game over.")
+        elif self.board.is_stalemate():
+            print("Stalemate! Game over.")
+        elif self.board.is_insufficient_material():
+            print("Insufficient material! Game over.")
+        elif self.board.is_check():
+            print("Check!")
+
+        print(f"Moves played: {len(self.move_history)}")
 
     def make_move(self, move_str):
         try:
