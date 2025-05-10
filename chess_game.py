@@ -116,3 +116,38 @@ class ChessGame:
             piece_symbol = self.piece_symbols.get(piece.symbol(), piece.symbol()) if piece else "?"
             print(f"{piece_symbol} {start} → {', '.join(ends)}")
 
+    def get_game_result(self):
+        if self.board.is_checkmate():
+            winner = "Black" if self.board.turn else "White"
+            return f"Checkmate! {winner} wins."
+        
+        elif self.board.is_stalemate():
+            return "Stalemate! Game is a draw."
+        
+        elif self.board.is_insufficient_material():
+            return "Insufficient material! Game is a draw."
+        
+        elif self.board.is_seventyfive_moves():
+            return "75-move rule! Game is a draw."
+        
+        elif self.board.is_fivefold_repetition():
+            return "Fivefold repetition! Game is a draw."
+        
+        return None
+    
+    def is_game_over(self):
+        return self.board.is_game_over()
+
+    def get_fen(self):
+        return self.board.fen()
+
+    def load_fen(self, fen):
+        try:
+            self.board.set_fen(fen)
+            self.move_history.clear()  
+            print("Position loaded successfully.")
+            self.display_board()
+            return True
+        except ValueError as e:
+            print(f"Invalid FEN: {e}")
+            return False
