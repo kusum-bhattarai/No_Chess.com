@@ -53,6 +53,20 @@ class ChessGame:
         print(f"Moves played: {len(self.move_history)}")
 
     def make_move(self, move_str):
+        move = self.parse_move(move_str)
+
+        if not move:
+            return False
+        
+        board_copy = self.board.copy()
+        self.board.push(move)
+        self._add_to_history(move, board_copy)
+
+        self.display_board()
+        return True
+    
+    #to handle move validity
+    def parse_move(self, move_str):
         try:
             move = chess.Move.from_uci(move_str)
             if move in self.board.legal_moves:
@@ -65,7 +79,7 @@ class ChessGame:
         except ValueError:
             print(f"Invalid move format: {move_str}")
             return False
-
+        
     def _add_to_history(self, move, previous_board):
         self.move_history.append((move, previous_board))
 
