@@ -15,4 +15,22 @@ class StockfishEngine:
             bufsize=1
         )
 
-    
+        #sending uci command
+        self.engine.stdin.write('uci/n') 
+        self.engine.stdin.flush()
+
+        #making sure its ready
+        self.engine.stdin.write('isready\n')
+        self.engine.stdin.flush()
+
+
+        #waiting for uciok and readyok response
+        self.read_until('uciok')
+        self.read_until('readyok')
+
+    def read_until(self, keyword):
+        while True:
+            line = self.engine.stdout.readline().strip()
+            if keyword in line:
+                break
+
