@@ -34,3 +34,29 @@ class StockfishEngine:
             if keyword in line:
                 break
 
+    def set_position(self, moves: list):
+        #construct the position command
+        command = "position startpos"
+        if moves:
+            moves_str = " ".join(moves)
+            command += f" moves {moves_str}"
+        
+        #send the command to stockfish
+        self.engine.stdin.write(command + '\n')
+        self.engine.stdin.flush()          
+
+    
+    def get_best_move(self, depth=15):
+        self.engine.stdin.write(f"go depth {depth}\n")
+        self.engine.stdin.flush()
+
+        best_move = None
+        while True:
+            line = self.engine.stdout.readline().strip()
+            if line.startswith("bestmove"):
+                parts = line.split()
+                if len(parts) >= 2:
+                    best_move = parts[1]
+                break  # Exit after finding best move
+
+        return best_move

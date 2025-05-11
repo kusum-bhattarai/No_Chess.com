@@ -83,6 +83,9 @@ class ChessGame:
     def _add_to_history(self, move, previous_board):
         self.move_history.append((move, previous_board))
 
+    def get_move_history_uci(self):
+        return [move.uci() for move, _ in self.move_history]
+
     def undo_move(self):
         if not self.move_history:
             print("No moves to undo.")
