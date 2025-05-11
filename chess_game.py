@@ -1,12 +1,13 @@
 import chess
 from collections import deque
+import os
 
 class ChessGame:
 
     piece_symbols = {
-            'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
-            'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙',
-            '.': '·'
+            'r': '♜ ', 'n': '♞ ', 'b': '♝ ', 'q': '♛ ', 'k': '♚ ', 'p': '♟ ',
+            'R': '♖ ', 'N': '♘ ', 'B': '♗ ', 'Q': '♕ ', 'K': '♔ ', 'P': '♙ ',
+            '.': '· '
         }
 
     def __init__(self):
@@ -15,10 +16,15 @@ class ChessGame:
         #to store history for undo functionality
         self.move_history = deque()
 
-    def display_board(self):
+    def clear_screen(self):
+        os.system('clear')
 
-        print("  a b c d e f g h")
-        print(" +-----------------+")
+    def display_board(self, clear=True):
+        if clear:
+            self.clear_screen()
+
+        print("   a  b  c  d  e  f  g  h")
+        print(" +-----------------------+")
         for rank in range(7, -1, -1):
             print(f"{rank+1}| ", end="")
             for file in range(8):
@@ -29,8 +35,8 @@ class ChessGame:
                 else:
                     print(self.piece_symbols['.'], end=" ")
             print(f"|{rank+1}")
-        print(" +-----------------+")
-        print("  a b c d e f g h")
+        print(" +-----------------------+")
+        print("   a  b  c  d  e  f  g  h")
         
         #for current state info
         self.display_game_state()
@@ -70,15 +76,13 @@ class ChessGame:
         try:
             move = chess.Move.from_uci(move_str)
             if move in self.board.legal_moves:
-                self.board.push(move)
-                self.display_board()
-                return True
+                return move
             else:
                 print(f"Illegal move: {move_str}")
-                return False
+                return None
         except ValueError:
             print(f"Invalid move format: {move_str}")
-            return False
+            return None
         
     def _add_to_history(self, move, previous_board):
         self.move_history.append((move, previous_board))
