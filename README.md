@@ -13,7 +13,7 @@ This is a simple terminal-based chess game implemented using the `python-chess` 
 - **Recommends moves from StockFish Engine:** Displays the best move recommended by StockFish engine based on current board state.
 
 ## Prerequisites
-Ensure you have Python installed on your system. You can install the dependencies using 
+Ensure you have Python installed on your system. Create a virtual environment and install the dependencies using:  
 ```
 pip install -r requirements.txt
 ```
