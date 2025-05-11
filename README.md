@@ -1,7 +1,7 @@
 # No_Chess.com
 
 ## Overview
-This is a simple terminal-based chess game implemented using the `python-chess` library. The game allows players to view the board, make legal moves, and check for conditions like check, checkmate, and stalemate. It is designed for fun and learning, with the potential to evolve into a more advanced chess engine with move recommendations and analysis. Since chess.com only allows one free game review per day, this will help beginners analyze and mess with as many games as they want. (Beginners like me lol)
+This is a simple terminal-based chess game implemented using the `python-chess` library. The game allows players to view the board, make legal moves, and check for conditions like check, checkmate, and stalemate. It is designed for fun and learning,capable of giving move recommendations and analysis(in future). Since chess.com only allows one free game review per day, this will help beginners analyze and mess with as many games as they want. (Beginners like me lol)
 
 ## Features
 - **Display Board:** Prints the chessboard in the terminal with Unicode piece symbols.
@@ -10,12 +10,12 @@ This is a simple terminal-based chess game implemented using the `python-chess` 
 - **Turn Tracking:** Indicates whose turn it is (White or Black).
 - **Check and Checkmate Detection:** Notifies the player if a check, checkmate, or stalemate occurs.
 - **Legal Moves Listing:** Displays all possible legal moves for the current position.
+- **Recommends moves from StockFish Engine:** Displays the best move recommended by StockFish engine based on current board state.
 
 ## Prerequisites
-Ensure you have Python installed on your system. You also need the `python-chess` library, which can be installed using:
-
-```sh
-pip install python-chess
+Ensure you have Python installed on your system. You can install the dependencies using 
+```
+pip install -r requirements.txt
 ```
 
 ## How to Use
@@ -24,41 +24,47 @@ pip install python-chess
 2. Open a terminal and navigate to the script's directory.
 3. Run the script using:
    ```sh
-   python chess.py
+   python main.py
    ```
 
 ### Available Commands
-- **Display the Board:** The board is displayed at the start and after each valid move.
-- **Make a Move (make_move):** Enter moves using the UCI notation (e.g., `e2e4` to move a piece from e2 to e4).
-- **Print Legal Moves (print_legal_moves):** The script provides a list of legal moves, grouped by piece position.
+```
+Available commands:
+  e2e4, g1f3, etc.    - Make a move directly using UCI notation
+  recommend           - Get Stockfish's recommended move
+  analyze             - Analyze current position
+  undo                - Undo the last move
+  legal               - Show all legal moves
+  fen                 - Show current position's FEN string
+  load [fen]          - Load a position from a FEN string
+  help                - Show this help message
+  quit                - Exit the game
+```
 
 ### Example Gameplay
 ```
-  a b c d e f g h
- +-----------------+
-8| ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ |8
-7| ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟ |7
-6| · · · · · · · · |6
-5| · · · · · · · · |5
-4| · · · · · · · · |4
-3| · · · · · · · · |3
-2| ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙ |2
-1| ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖ |1
- +-----------------+
-  a b c d e f g h
+ a  b  c  d  e  f  g  h
+ +-----------------------+
+8| ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜  |8
+7| ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟  |7
+6| ·  ·  ·  ·  ·  ·  ·  ·  |6
+5| ·  ·  ·  ·  ·  ·  ·  ·  |5
+4| ·  ·  ·  ·  ♙  ·  ·  ·  |4
+3| ·  ·  ·  ·  ·  ·  ·  ·  |3
+2| ♙  ♙  ♙  ♙  ·  ♙  ♙  ♙  |2
+1| ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖  |1
+ +-----------------------+
+   a  b  c  d  e  f  g  h
 
-Current turn: White
+Current turn: Black
+Moves played: 1
 
-> Move: e2e4
-> Move: d7d5
-> Move: g1f3
+Your move (or 'recommend', 'analyze', 'help'): 
 ```
 
 ## Known Issues
-- The script currently does not support castling, en passant, or promotion handling.
-- The input system is limited to UCI notation without interactive guidance.
+- The program only gives recommendations on best move for now but lacks the implementation for analysis or evaluation.
 
 ## Future Enhancements
-- Implement an AI-based move recommender and analyzer using Stockfish engine.
 - Add GUI support for better visualization.
 - Support PGN import/export for game tracking.
