@@ -82,3 +82,52 @@ class StockfishEngine:
                 break  # Exit after finding best move
 
         return best_move
+    
+    #depth initialized at 20 to get a better analysis
+    def analyze_position(self, depth=20):
+        self.engine.stdin.write(f"go depth {depth}\n")
+        self.engine.stdin.flush()
+
+        analysis = {
+            "score": 0,  #score in centipawns (1/100 pawn)
+            "is_mate": False,  #true if mate score
+            "best_move": None,
+            "pv": [],
+            "depth": 0
+        }
+
+        while True:
+            line = self.engine.stdout.readline().strip()
+            if line.startswith("info depth"):
+                parts = line.split()
+                try:
+                    #extract depth
+                    depth_idx = parts.index("depth")
+                    analysis["depth"] = int(parts[depth_idx + 1])
+
+                    #extract score
+                    score_idx = parts.index("score")
+                    score_type = parts[score_idx + 1]
+                    score_value = int(parts[score_idx + 2])
+                    if score_type == "mate":
+                        analysis["is_mate"] = True
+                        analysis["score"] = score_value  #mate in 'x' moves
+                    else:  
+                        #score_type == "cp"
+                        analysis["is_mate"] = False
+                        analysis["score"] = score_value  #in centipawns
+
+                    #extract PV
+                    pv_idx = parts.index("pv") if "pv" in parts else -1
+                    if pv_idx != -1:
+                        analysis["pv"] = parts[pv_idx + 1:]
+
+                except (ValueError, IndexError):
+                    continue  
+            elif line.startswith("bestmove"):
+                parts = line.split()
+                if len(parts) >= 2:
+                    analysis["best_move"] = parts[1]
+                break 
+
+        return analysis
