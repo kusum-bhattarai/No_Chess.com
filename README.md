@@ -63,6 +63,25 @@ Moves played: 1
 Your move (or 'recommend', 'analyze', 'help'): 
 ```
 
+### Recommend Command Output:
+```
+Your move (or 'recommend', 'analyze', 'help'): recommend
+Stockfish recommends: b1c3
+Make this move? (y/n):
+
+```
+
+### Analysis Command Output:
+```
+Stockfish Analysis:
+Depth: 20
+Evaluation: 0.28
+Best move: d2d4
+Line: d2d4 e5d4 d1d4 b8c6 d4d4 d4d4 d4d4 c6c6
+Position: The position is roughly equal.
+
+```
+
 ## Future Enhancements
 - Add an evaluation bar on the left side similar to Chess.com.
 - Integrate game review and analysis for an entire game.
