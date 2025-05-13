@@ -11,6 +11,7 @@ This is a simple terminal-based chess game implemented using the `python-chess` 
 - **Check and Checkmate Detection:** Notifies the player if a check, checkmate, or stalemate occurs.
 - **Legal Moves Listing:** Displays all possible legal moves for the current position.
 - **Recommends moves from StockFish Engine:** Displays the best move recommended by StockFish engine based on current board state.
+- **Analyzes current position:** Analyzes current move and position and gives back user friendly analysis from StockFish's response.
 
 ## Prerequisites
 Ensure you have Python installed on your system. Create a virtual environment and install the dependencies using:  
@@ -62,9 +63,9 @@ Moves played: 1
 Your move (or 'recommend', 'analyze', 'help'): 
 ```
 
-## Known Issues
-- The program only gives recommendations on best move for now but lacks the implementation for analysis or evaluation.
-
 ## Future Enhancements
+- Add an evaluation bar on the left side similar to Chess.com.
+- Integrate game review and analysis for an entire game.
+- Add different modes for players to have fun with.
 - Add GUI support for better visualization.
 - Support PGN import/export for game tracking.
