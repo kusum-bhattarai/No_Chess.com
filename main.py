@@ -83,7 +83,21 @@ def main():
                 game.display_board()
                 
         elif user_input == "analyze":
-            print("Analysis feature coming soon!")
+            # Get move history in UCI format
+            moves = game.get_move_history_uci()
+            
+            # Set the position in the engine
+            engine.set_position(moves)
+            
+            # Get analysis
+            analysis = engine.analyze_position()
+            
+            # Display analysis
+            game.display_analysis(analysis)
+            
+            # Prompt to return to game
+            input("Press Enter to continue...")
+            game.display_board()
             
         elif user_input == "undo":
             game.undo_move()

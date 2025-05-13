@@ -1,6 +1,7 @@
 import chess
 from collections import deque
 import os
+from utils import format_score, format_pv
 
 class ChessGame:
 
@@ -57,6 +58,39 @@ class ChessGame:
             print("Check!")
 
         print(f"Moves played: {len(self.move_history)}")
+
+    def display_analysis(self, analysis):
+        """Display Stockfish analysis including score, best move, PV, and insights."""
+        score = analysis["score"]
+        is_mate = analysis["is_mate"]
+        best_move = analysis["best_move"]
+        pv = analysis["pv"]
+        depth = analysis["depth"]
+
+        #format the analysis
+        score_str = format_score(score, is_mate)
+        pv_str = format_pv(pv[:4])  #limited pv to 4 which gives sequence of 8 (4 moves each)
+
+        #formatted analysis
+        if is_mate:
+            insight = f"{'White' if score > 0 else 'Black'} can deliver checkmate in {abs(score)} move(s)."
+        else:
+            if abs(score) < 50:
+                insight = "The position is roughly equal."
+            elif score > 0:
+                insight = f"White has a {'slight' if score < 200 else 'strong'} advantage."
+            else:
+                insight = f"Black has a {'slight' if score > -200 else 'strong'} advantage."
+
+        self.display_board(clear=True)
+
+        #display analysis
+        print("\nStockfish Analysis:")
+        print(f"Depth: {depth}")
+        print(f"Evaluation: {score_str}")
+        print(f"Best move: {best_move[:2]}{best_move[2:]}")
+        print(f"Line: {pv_str}")
+        print(f"Position: {insight}")
 
     def make_move(self, move_str):
         move = self.parse_move(move_str)
