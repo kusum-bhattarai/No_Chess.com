@@ -77,7 +77,13 @@ def main():
             #show what this move would look like on the board
             confirm = input("Make this move? (y/n): ").strip().lower()
             if confirm == "y" or confirm == "yes":
-                game.make_move(best_move)
+                success = game.make_move(best_move)
+                #update analysis after making the recommended move
+                if success:
+                    moves = game.get_move_history_uci()
+                    engine.set_position(moves)
+                    analysis = engine.analyze_position()
+                    game.set_analysis(analysis)
             else:
                 #redisplay the board if the user doesn't take the recommendation
                 game.display_board()
@@ -100,7 +106,13 @@ def main():
             game.display_board()
             
         elif user_input == "undo":
-            game.undo_move()
+            #update analysis after undoing 
+            if game.undo_move():
+                moves = game.get_move_history_uci()
+                engine.set_position(moves)
+                analysis = engine.analyze_position()
+                game.set_analysis(analysis)
+
             
         elif user_input == "legal":
             game.print_legal_moves()
