@@ -77,7 +77,13 @@ def main():
             #show what this move would look like on the board
             confirm = input("Make this move? (y/n): ").strip().lower()
             if confirm == "y" or confirm == "yes":
-                game.make_move(best_move)
+                success = game.make_move(best_move)
+                #update analysis after making the recommended move
+                if success:
+                    moves = game.get_move_history_uci()
+                    engine.set_position(moves)
+                    analysis = engine.analyze_position()
+                    game.set_analysis(analysis)
             else:
                 #redisplay the board if the user doesn't take the recommendation
                 game.display_board()
@@ -100,7 +106,13 @@ def main():
             game.display_board()
             
         elif user_input == "undo":
-            game.undo_move()
+            #update analysis after undoing 
+            if game.undo_move():
+                moves = game.get_move_history_uci()
+                engine.set_position(moves)
+                analysis = engine.analyze_position()
+                game.set_analysis(analysis)
+
             
         elif user_input == "legal":
             game.print_legal_moves()
@@ -119,7 +131,22 @@ def main():
         #default input would be moves
         else:
             success = game.make_move(user_input)
-            if not success:
+
+            #for analysis at every move
+            if success:
+                #get move history in uci format
+                moves = game.get_move_history_uci()
+            
+                #set the position in the engine
+                engine.set_position(moves)
+            
+                #get analysis
+                analysis = engine.analyze_position()
+            
+                #update the game with analysis
+                game.set_analysis(analysis)
+
+            else:
                 print("Invalid move. Type 'legal' to see valid moves or 'help' for commands.")
                 input("Press Enter to continue...")
                 game.display_board()

@@ -1,7 +1,7 @@
 import chess
 from collections import deque
 import os
-from utils import format_score, format_pv
+from utils import format_score, format_pv, get_evaluation_bar
 
 class ChessGame:
 
@@ -16,6 +16,13 @@ class ChessGame:
         
         #to store history for undo functionality
         self.move_history = deque()
+        
+        #to store current analysis
+        self.current_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
+    
+    #sets the analysis data
+    def set_analysis(self, analysis):
+        self.current_analysis = analysis
 
     def clear_screen(self):
         os.system('clear')
@@ -24,10 +31,42 @@ class ChessGame:
         if clear:
             self.clear_screen()
 
-        print("   a  b  c  d  e  f  g  h")
-        print(" +-----------------------+")
+        bar_height = 8  #same as chess board height
+
+        # Get evaluation data
+        score = self.current_analysis["score"]
+        is_mate = self.current_analysis["is_mate"]
+
+        if is_mate:
+            streak = bar_height if score > 0 else 0  #full for white mate, empty for black
+        else:
+            #converting the score at bar level   
+            max_score = 500               
+            
+            capped_score = max(min(score, max_score), -max_score) #capped at +/-500
+            
+            #map from [-max_score, max_score] to [0, bar_height]
+            streak = int((capped_score + max_score) * bar_height / (2 * max_score))
+        
+        #get the evaluation bar
+        eval_bar = get_evaluation_bar(streak, is_mate, bar_height)
+        
+        #evaluation score as text
+        score_text = format_score(score, is_mate)
+
+        print("            a  b  c  d  e  f  g  h")
+        print("          +------------------------+")
         for rank in range(7, -1, -1):
-            print(f"{rank+1}| ", end="")
+            #evaluation bar segment 
+            bar_segment = eval_bar[7 - rank]  # Invert rank for bar alignment
+
+            if rank == 4:  
+                #score near the bar
+                print(f"{bar_segment} {score_text} | {rank+1}|", end=" ")
+            else:
+                #consistent spacing for alignment
+                print(f"{bar_segment}      | {rank+1}|", end=" ")
+
             for file in range(8):
                 square = chess.square(file, rank)
                 piece = self.board.piece_at(square)
@@ -36,8 +75,8 @@ class ChessGame:
                 else:
                     print(self.piece_symbols['.'], end=" ")
             print(f"|{rank+1}")
-        print(" +-----------------------+")
-        print("   a  b  c  d  e  f  g  h")
+        print("          +------------------------+")
+        print("            a  b  c  d  e  f  g  h")
         
         #for current state info
         self.display_game_state()
