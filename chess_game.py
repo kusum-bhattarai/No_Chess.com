@@ -16,6 +16,13 @@ class ChessGame:
         
         #to store history for undo functionality
         self.move_history = deque()
+        
+        #to store current analysis
+        self.current_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
+    
+    #sets the analysis data
+    def set_analysis(self, analysis):
+        self.current_analysis = analysis
 
     def clear_screen(self):
         os.system('clear')
