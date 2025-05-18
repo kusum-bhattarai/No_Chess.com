@@ -119,7 +119,22 @@ def main():
         #default input would be moves
         else:
             success = game.make_move(user_input)
-            if not success:
+
+            #for analysis at every move
+            if success:
+                #get move history in uci format
+                moves = game.get_move_history_uci()
+            
+                #set the position in the engine
+                engine.set_position(moves)
+            
+                #get analysis
+                analysis = engine.analyze_position()
+            
+                #update the game with analysis
+                game.set_analysis(analysis)
+
+            else:
                 print("Invalid move. Type 'legal' to see valid moves or 'help' for commands.")
                 input("Press Enter to continue...")
                 game.display_board()
