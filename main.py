@@ -149,7 +149,7 @@ def main():
             else:
                 print("Invalid move. Type 'legal' to see valid moves or 'help' for commands.")
                 input("Press Enter to continue...")
-                game.display_board()
+            game.display_board()
     
     result = game.get_game_result()
     print("\nGame over!")
