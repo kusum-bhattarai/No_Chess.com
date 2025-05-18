@@ -12,6 +12,7 @@ This is a simple terminal-based chess game implemented using the `python-chess` 
 - **Legal Moves Listing:** Displays all possible legal moves for the current position.
 - **Recommends moves from StockFish Engine:** Displays the best move recommended by StockFish engine based on current board state.
 - **Analyzes current position:** Analyzes current move and position and gives back user friendly analysis from StockFish's response.
+- **Live Evaluation:** Evaluation bar showing position advantage along with the score.
 
 ## Prerequisites
 Ensure you have Python installed on your system. Create a virtual environment and install the dependencies using:  
@@ -28,6 +29,27 @@ pip install -r requirements.txt
    python main.py
    ```
 
+### Example Gameplay
+```
+            a  b  c  d  e  f  g  h
+          +------------------------+
+░      | 8| ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜  |8
+░      | 7| ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟  |7
+░      | 6| ·  ·  ·  ·  ·  ·  ·  ·  |6
+░ 0.00 | 5| ·  ·  ·  ·  ·  ·  ·  ·  |5
+█      | 4| ·  ·  ·  ·  ·  ·  ·  ·  |4
+█      | 3| ·  ·  ·  ·  ·  ·  ·  ·  |3
+█      | 2| ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙  |2
+█      | 1| ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖  |1
+          +------------------------+
+            a  b  c  d  e  f  g  h
+
+Current turn: White
+Moves played: 0
+
+Your move (or 'recommend', 'analyze', 'help'): 
+```
+
 ### Available Commands
 ```
 Available commands:
@@ -40,27 +62,6 @@ Available commands:
   load [fen]          - Load a position from a FEN string
   help                - Show this help message
   quit                - Exit the game
-```
-
-### Example Gameplay
-```
- a  b  c  d  e  f  g  h
- +-----------------------+
-8| ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜  |8
-7| ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟  |7
-6| ·  ·  ·  ·  ·  ·  ·  ·  |6
-5| ·  ·  ·  ·  ·  ·  ·  ·  |5
-4| ·  ·  ·  ·  ♙  ·  ·  ·  |4
-3| ·  ·  ·  ·  ·  ·  ·  ·  |3
-2| ♙  ♙  ♙  ♙  ·  ♙  ♙  ♙  |2
-1| ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖  |1
- +-----------------------+
-   a  b  c  d  e  f  g  h
-
-Current turn: Black
-Moves played: 1
-
-Your move (or 'recommend', 'analyze', 'help'): 
 ```
 
 ### Recommend Command Output:
