@@ -1,10 +1,13 @@
 import chess
 from chess_game import ChessGame
 from engine import StockfishEngine
+from pgnReview import PgnReviewer
 import os
 
 def clear_screen():
     os.system('clear')
+
+
 
 def print_help():
     print("\nAvailable commands:")
@@ -44,6 +47,24 @@ def main():
     
     #initialize the game class
     game = ChessGame()
+
+    # PGN Import 
+    import_pgn_choice = input("\nDo you want to import a PGN game for review? (y/n, default n): ").strip().lower()
+    if import_pgn_choice == "y" or import_pgn_choice == "yes":
+        pgn_filepath = input("Enter the path to your PGN file: ").strip()
+        if os.path.exists(pgn_filepath):
+            print(f"Importing and analyzing {pgn_filepath}...")
+            pgn_reviewer = PgnReviewer(engine) # Instantiate the new PgnReviewer class
+            pgn_reviewer.perform_review(pgn_filepath) # Call its review method
+            print("\nPGN game review complete. You can now choose to start a new game or exit.")
+            play_new_game_after_review = input("Start a new game? (y/n, default y): ").strip().lower()
+            if play_new_game_after_review == "n" or play_new_game_after_review == "no":
+                print("Thank you for using NoChess.com!")
+                return
+            else:
+                game = ChessGame() # Re-initialize for a new interactive game
+        else:
+            print(f"Error: PGN file not found at {pgn_filepath}. Starting a regular game instead.")
     
     #display the board
     game.display_board()
