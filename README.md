@@ -13,12 +13,22 @@ This is a simple terminal-based chess game implemented using the `python-chess` 
 - **Recommends moves from StockFish Engine:** Displays the best move recommended by StockFish engine based on current board state.
 - **Analyzes current position:** Analyzes current move and position and gives back user friendly analysis from StockFish's response.
 - **Live Evaluation:** Evaluation bar showing position advantage along with the score.
+- **PGN Game Review:** Import your PGN games for a move-by-move Stockfish analysis and review, similar to Chess.com's game review feature.
 
 ## Prerequisites
 Ensure you have Python installed on your system. Create a virtual environment and install the dependencies using:  
 ```
 pip install -r requirements.txt
 ```
+
+### Project Structure
+
+- main.py: The main entry point for the game and user interaction.
+- chess_game.py: Handles the core logic for interactive chess games.
+- engine.py: Manages communication with the Stockfish chess engine.
+- pgn_reviewer.py: Contains the logic for parsing PGN files and providing move-by-move game reviews.
+- utils.py: Provides utility functions for formatting and displaying game data.
+- requirements.txt: Lists the Python dependencies.
 
 ## How to Use
 ### Running the Game
@@ -29,7 +39,7 @@ pip install -r requirements.txt
    python main.py
    ```
 
-### Example Gameplay
+### Example Gameplay (Interactive)
 ```
             a  b  c  d  e  f  g  h
           +------------------------+
@@ -83,9 +93,36 @@ Position: The position is roughly equal.
 
 ```
 
+### Example PGN Review Output
+```
+--- PGN Game Review: My Online Game ---
+White: PlayerA vs. Black: PlayerB
+Result: 1-0
+
+            a  b  c  d  e  f  g  h
+          +------------------------+
+░      | 8| ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜  |8
+░      | 7| ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟  |7
+░      | 6| ·  ·  ·  ·  ·  ·  ·  ·  |6
+░ 0.15 | 5| ·  ·  ·  ·  ·  ·  ·  ·  |5
+█      | 4| ·  ·  ·  ♙  ·  ·  ·  ·  |4
+█      | 3| ·  ·  ·  ·  ·  ·  ·  ·  |3
+█      | 2| ♙  ♙  ♙  ·  ♙  ♙  ♙  ♙  |2
+█      | 1| ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖  |1
+          +------------------------+
+            a  b  c  d  e  f  g  h
+
+--- Move 1. White plays e2e4 ---
+Evaluation before move: 0.00
+Stockfish's Best Move (pre-move): e2e4
+Line (after Stockfish's best): e4 e5 Nf3 Nc6
+Evaluation after move: 0.05
+Comment: Excellent move! Matches Stockfish's top recommendation.
+Press Enter to continue to the next move review...
+
+```
+
 ## Future Enhancements
-- Add an evaluation bar on the left side similar to Chess.com.
-- Integrate game review and analysis for an entire game.
-- Add different modes for players to have fun with.
-- Add GUI support for better visualization.
-- Support PGN import/export for game tracking.
+- Add different modes (Astro-chess, Superhero-chess) for players to have fun with.
+- Implement GUI for better visualization.
+- Support PGN export.
