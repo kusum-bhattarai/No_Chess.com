@@ -1,7 +1,7 @@
 # No_Chess.com
 
 ## Overview
-This is a simple terminal-based chess game implemented using the `python-chess` library. The game allows players to view the board, make legal moves, and check for conditions like check, checkmate, and stalemate. It is designed for fun and learning,capable of giving move recommendations and analysis(in future). Since chess.com only allows one free game review per day, this will help beginners analyze and mess with as many games as they want. (Beginners like me lol)
+This is a simple terminal-based chess game implemented using the `python-chess` library. The game allows players to view the board, make legal moves, and check for conditions like check, checkmate, and stalemate. It is designed for fun and learning,capable of giving move recommendations and analysis. Since chess.com only allows one free game review per day, this will help beginners analyze, review and mess with as many games as they want. (Beginners like me lol)
 
 ## Features
 - **Display Board:** Prints the chessboard in the terminal with Unicode piece symbols.
