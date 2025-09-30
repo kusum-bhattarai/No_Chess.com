@@ -1,2 +1,5 @@
 chess==1.11.2
 python-chess==1.999
+pytest==8.3.3
+pytest-mock==3.14.0
+coverage==7.6.1
