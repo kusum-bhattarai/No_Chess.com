@@ -1,12 +1,13 @@
 import chess
 import chess.pgn
 import os
-from utils import format_score, format_pv, get_evaluation_bar
+from utils import format_score, format_pv, get_evaluation_bar, get_piece_symbols
 
 class PgnReviewer:
     def __init__(self, engine):
         self.engine = engine
         self.board = chess.Board() # The board specifically for review purposes
+        self.piece_symbols = get_piece_symbols() # Piece symbols for display
 
     def clear_screen(self):
         os.system('clear')

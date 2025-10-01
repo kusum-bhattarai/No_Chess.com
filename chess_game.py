@@ -1,7 +1,7 @@
 import chess
 from collections import deque
 import os
-from utils import format_score, format_pv, get_evaluation_bar
+from utils import format_score, format_pv, get_evaluation_bar, get_piece_symbols
 
 class ChessGame:
 
@@ -19,6 +19,9 @@ class ChessGame:
         
         #to store current analysis
         self.current_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
+
+        #get piece symbols
+        self.piece_symbols = get_piece_symbols()
     
     #sets the analysis data
     def set_analysis(self, analysis):
