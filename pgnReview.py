@@ -45,7 +45,7 @@ class PgnReviewer:
         else:
             return "Comment: Inaccuracy. Not the most precise, but still reasonable."
 
-    def perform_review(self, pgn_filepath: str, quick_mode: bool = False) -> List[Dict]:
+    def perform_review(self, pgn_filepath: str, quick_mode: bool = False, pause: bool = False) -> List[Dict]:
         """
         Loads a PGN game, iterates through its moves, and provides Stockfish analysis
         for each move, similar to a game review. Returns structured review data.
@@ -73,13 +73,20 @@ class PgnReviewer:
                 # Reset the review board to the initial state
                 self.board = chess.Board()
 
+                # Collect moves into a list so we can validate the game has moves and
+                # avoid consuming a generator multiple times.
+                moves = list(game_node.mainline_moves())
+                if not moves:
+                    print(f"No valid chess game found in {pgn_filepath}.")
+                    return review_data
+
                 # Display game metadata
                 print(f"\n--- PGN Game Review: {game_node.headers.get('Event', 'Untitled Game')} ---")
                 print(f"White: {game_node.headers.get('White', '?')} vs. Black: {game_node.headers.get('Black', '?')}")
                 print(f"Result: {game_node.headers.get('Result', '*')}\n")
 
                 move_counter = 1
-                for move in game_node.mainline_moves():
+                for move in moves:
                     self.clear_screen()  # Still need this? UI has it, but call if needed
 
                     # Analyze position *before* the move
@@ -128,7 +135,8 @@ class PgnReviewer:
                         "comment": comment
                     })
 
-                    input("Press Enter to continue to the next move review...")
+                    if pause:
+                        input("Press Enter to continue to the next move review...")
                     move_counter += 1
 
                 print("\n--- End of Game Review ---")
@@ -143,7 +151,8 @@ class PgnReviewer:
 
         except FileNotFoundError:
             print(f"Error: PGN file not found at '{pgn_filepath}'.")
-        except chess.pgn.Error as e:
+        except Exception as e:
+            # catch broad exceptions related to parsing/IO and report them.
             print(f"PGN parsing error: {e}")
         except Exception as e:
             print(f"An error occurred during PGN parsing or review: {e}")
