@@ -1,7 +1,7 @@
 import chess
 from collections import deque
 import os
-from utils import format_score, format_pv, get_evaluation_bar
+from utils import format_score, format_pv, get_evaluation_bar, get_piece_symbols
 
 class ChessGame:
 
@@ -19,6 +19,9 @@ class ChessGame:
         
         #to store current analysis
         self.current_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
+
+        #get piece symbols
+        self.piece_symbols = get_piece_symbols()
     
     #sets the analysis data
     def set_analysis(self, analysis):
@@ -161,7 +164,9 @@ class ChessGame:
         self.move_history.append((move, previous_board))
 
     def get_move_history_uci(self):
-        return [move.uci() for move, _ in self.move_history]
+        # Some entries (from load_fen with record_history=True) may store
+        # a sentinel None for the move. Filter those out to avoid errors.
+        return [move.uci() for move, _ in self.move_history if move is not None]
 
     def undo_move(self):
         if not self.move_history:
@@ -169,13 +174,20 @@ class ChessGame:
             return False
             
         #undo the last move and board state
-        _, previous_board = self.move_history.pop()
-        
-        #restore the previous board state
+        move, previous_board = self.move_history.pop()
+
+        # restore the previous board state
         self.board = previous_board
-        print("Move undone.")
+
+        # If the popped entry was a sentinel from load_fen(record_history=True)
+        # then move will be None — report a different message in that case.
+        if move is None:
+            print("Position load undone.")
+        else:
+            print("Move undone.")
+
         self.display_board()
-        return True   
+        return True
  
     def get_legal_moves(self):
         return [move.uci() for move in self.board.legal_moves]
@@ -221,13 +233,34 @@ class ChessGame:
     def get_fen(self):
         return self.board.fen()
 
-    def load_fen(self, fen):
+    def load_fen(self, fen, record_history: bool = False):
+        """Load a FEN into the board.
+
+        If record_history is True, the previous board state is pushed onto the
+        move history so the load can be undone with `undo_move()`. By default
+        the move history is cleared (preserves previous behavior).
+        """
         try:
+            previous_board = self.board.copy()
             self.board.set_fen(fen)
-            self.move_history.clear()  
+            if record_history:
+                # store a sentinel move None together with the previous board so undo_move works
+                self.move_history.append((None, previous_board))
+            else:
+                self.move_history.clear()
+
             print("Position loaded successfully.")
             self.display_board()
             return True
         except ValueError as e:
             print(f"Invalid FEN: {e}")
             return False
+
+    def get_state_json(self):
+        """Return a JSON-serializable dict of the current game state for UI/tests."""
+        return {
+            "fen": self.get_fen(),
+            "turn": "white" if self.board.turn else "black",
+            "analysis": self.current_analysis,
+            "legal_moves": self.get_legal_moves()
+        }
