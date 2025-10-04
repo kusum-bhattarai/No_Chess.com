@@ -121,10 +121,3 @@ class GameRunner:
                 return False
             else:
                 print("Please enter y or n.")
-
-# Argparse integration (to be called from main.py)
-def create_parser():
-    parser = argparse.ArgumentParser(description="NoChess.com CLI")
-    parser.add_argument("--mode", choices=["beginner", "intermediate", "advanced"], default="intermediate", help="Difficulty mode")
-    parser.add_argument("--pgn", type=str, help="Path to PGN file for review")
-    return parser

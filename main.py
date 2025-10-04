@@ -5,6 +5,13 @@ from chess_game import ChessGame
 from pgnReview import PgnReviewer
 from game_runner import GameRunner
 
+def create_parser():
+    parser = argparse.ArgumentParser(description="NoChess.com - Terminal Chess Game")
+    parser.add_argument("--mode", choices=["beginner", "intermediate", "advanced"], default="intermediate", help="Difficulty mode")
+    parser.add_argument("--pgn", type=str, help="Path to PGN file for review (skips interactive if provided)")
+    return parser
+
+
 def main():
     parser = argparse.ArgumentParser(description="NoChess.com - Terminal Chess Game")
     parser.add_argument("--mode", choices=["beginner", "intermediate", "advanced"], default="intermediate", help="Difficulty mode")
