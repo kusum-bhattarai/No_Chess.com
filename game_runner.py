@@ -122,7 +122,7 @@ class GameRunner:
             else:
                 print("Please enter y or n.")
 
-# Optional: Argparse integration (called from main.py)
+# Argparse integration (to be called from main.py)
 def create_parser():
     parser = argparse.ArgumentParser(description="NoChess.com CLI")
     parser.add_argument("--mode", choices=["beginner", "intermediate", "advanced"], default="intermediate", help="Difficulty mode")

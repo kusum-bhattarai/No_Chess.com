@@ -2,29 +2,60 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, refinements ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, refinements ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run tests
-      run: pytest --cov=. --cov-report=html  
-    - name: Upload coverage report  
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: coverage-report
-        path: htmlcov/
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal test deps
+        run: |
+          python -m pip install --upgrade pip
+          # install only testing tools (avoid installing huge conda-specific requirements.txt)
+          pip install pytest pytest-cov
+
+      - name: Run tests with coverage (generate htmlcov)
+        id: pytest
+        continue-on-error: true
+        run: |
+          pytest --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-report=html -q
+        # continue-on-error so we can collect artifacts/logs even when tests fail
+
+      - name: Check htmlcov exists
+        id: check_htmlcov
+        run: |
+          if [ -d htmlcov ]; then
+            echo "htmlcov=true" >> $GITHUB_OUTPUT
+          else
+            echo "htmlcov=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload HTML coverage (only if generated)
+        if: steps.check_htmlcov.outputs.htmlcov == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: htmlcov
+          path: htmlcov/**
+
+      - name: Upload pytest logs (debug if tests failed)
+        if: steps.pytest.outcome != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-logs
+          path: .pytest_cache/**
+
+      - name: Fail if tests failed
+        if: steps.pytest.outcome != 'success'
+        run: |
+          echo "Tests failed in CI. See the pytest step output above or artifacts for details."
+          exit 1
