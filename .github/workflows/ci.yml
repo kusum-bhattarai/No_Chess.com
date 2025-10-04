@@ -21,8 +21,7 @@ jobs:
       - name: Install minimal test deps
         run: |
           python -m pip install --upgrade pip
-          # install only testing tools (avoid installing huge conda-specific requirements.txt)
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov python-chess
 
       - name: Run tests with coverage (generate htmlcov)
         id: pytest
