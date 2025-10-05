@@ -1,167 +1,66 @@
 import chess
 from collections import deque
-import os
-from .utils import format_score, format_pv, get_evaluation_bar, get_piece_symbols
+from typing import Dict, List, Optional
+from .ui.terminal_ui import TerminalUI
+from .utils import get_piece_symbols
 
 class ChessGame:
-
-    piece_symbols = {
-            'r': '♜ ', 'n': '♞ ', 'b': '♝ ', 'q': '♛ ', 'k': '♚ ', 'p': '♟ ',
-            'R': '♖ ', 'N': '♘ ', 'B': '♗ ', 'Q': '♕ ', 'K': '♔ ', 'P': '♙ ',
-            '.': '· '
-        }
-
-    def __init__(self):
+    def __init__(self, max_score: int = 500):
         self.board = chess.Board()
-        
-        #to store history for undo functionality
+        # To store history for undo functionality
         self.move_history = deque()
-        
-        #to store current analysis
+        # To store current analysis
         self.current_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
-
-        #get piece symbols
+        # UI instance for display
+        self.ui = TerminalUI(max_score=max_score)
+        # Piece symbols for legal moves print
         self.piece_symbols = get_piece_symbols()
-    
-    #sets the analysis data
-    def set_analysis(self, analysis):
+
+    # Sets the analysis data
+    def set_analysis(self, analysis: Dict):
         self.current_analysis = analysis
 
-    def clear_screen(self):
-        os.system('clear')
-
-    def display_board(self, clear=True):
-        if clear:
-            self.clear_screen()
-
-        bar_height = 8  #same as chess board height
-
-        # Get evaluation data
-        score = self.current_analysis["score"]
-        is_mate = self.current_analysis["is_mate"]
-
-        if is_mate:
-            streak = bar_height if score > 0 else 0  #full for white mate, empty for black
-        else:
-            #converting the score at bar level   
-            max_score = 500               
-            
-            capped_score = max(min(score, max_score), -max_score) #capped at +/-500
-            
-            #map from [-max_score, max_score] to [0, bar_height]
-            streak = int((capped_score + max_score) * bar_height / (2 * max_score))
-        
-        #get the evaluation bar
-        eval_bar = get_evaluation_bar(streak, is_mate, bar_height)
-        
-        #evaluation score as text
-        score_text = format_score(score, is_mate)
-
-        print("            a  b  c  d  e  f  g  h")
-        print("          +------------------------+")
-        for rank in range(7, -1, -1):
-            #evaluation bar segment 
-            bar_segment = eval_bar[7 - rank]  # Invert rank for bar alignment
-
-            if rank == 4:  
-                #score near the bar
-                print(f"{bar_segment} {score_text} | {rank+1}|", end=" ")
-            else:
-                #consistent spacing for alignment
-                print(f"{bar_segment}      | {rank+1}|", end=" ")
-
-            for file in range(8):
-                square = chess.square(file, rank)
-                piece = self.board.piece_at(square)
-                if piece:
-                    print(self.piece_symbols[piece.symbol()], end=" ")
-                else:
-                    print(self.piece_symbols['.'], end=" ")
-            print(f"|{rank+1}")
-        print("          +------------------------+")
-        print("            a  b  c  d  e  f  g  h")
-        
-        #for current state info
-        self.display_game_state()
+    def display_board(self, clear: bool = True):
+        self.ui.display_board(self.board, self.current_analysis, clear)
 
     def display_game_state(self):
-        #display turns
-        turn = "White" if self.board.turn else "Black"
-        print(f"\nCurrent turn: {turn}")
-        
-        #special board conditions
-        if self.board.is_checkmate():
-            print("Checkmate! Game over.")
-        elif self.board.is_stalemate():
-            print("Stalemate! Game over.")
-        elif self.board.is_insufficient_material():
-            print("Insufficient material! Game over.")
-        elif self.board.is_check():
-            print("Check!")
+        self.ui.display_game_state(self.board)
 
-        print(f"Moves played: {len(self.move_history)}")
+    def display_analysis(self, analysis: Dict):
+        self.ui.display_analysis(self.board, analysis)
 
-    def display_analysis(self, analysis):
-        """Display Stockfish analysis including score, best move, PV, and insights."""
-        score = analysis["score"]
-        is_mate = analysis["is_mate"]
-        best_move = analysis["best_move"]
-        pv = analysis["pv"]
-        depth = analysis["depth"]
-
-        #format the analysis
-        score_str = format_score(score, is_mate)
-        pv_str = format_pv(pv[:4])  #limited pv to 4 which gives sequence of 8 (4 moves each)
-
-        #formatted analysis
-        if is_mate:
-            insight = f"{'White' if score > 0 else 'Black'} can deliver checkmate in {abs(score)} move(s)."
-        else:
-            if abs(score) < 50:
-                insight = "The position is roughly equal."
-            elif score > 0:
-                insight = f"White has a {'slight' if score < 200 else 'strong'} advantage."
-            else:
-                insight = f"Black has a {'slight' if score > -200 else 'strong'} advantage."
-
-        self.display_board(clear=True)
-
-        #display analysis
-        print("\nStockfish Analysis:")
-        print(f"Depth: {depth}")
-        print(f"Evaluation: {score_str}")
-        print(f"Best move: {best_move[:2]}{best_move[2:]}")
-        print(f"Line: {pv_str}")
-        print(f"Position: {insight}")
-
-    def make_move(self, move_str):
-        move = self.parse_move(move_str)
-
-        if not move:
+    def make_move(self, move_str: str) -> bool:
+        try:
+            move = self.parse_move(move_str)
+            if not move:
+                return False
+            previous_fen = self.board.fen()
+            self.board.push(move)
+            self.move_history.append((move, previous_fen))
+            self.display_board()
+            return True
+        except chess.InvalidMoveError:
+            print(f"Illegal move: {move_str}")
             return False
-        
-        board_copy = self.board.copy()
-        self.board.push(move)
-        self._add_to_history(move, board_copy)
+        except ValueError as e:
+            print(f"Invalid move format: {move_str} ({e})")
+            return False
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return False
 
-        self.display_board()
-        return True
-    
-    #to handle move validity
-    def parse_move(self, move_str):
+    def parse_move(self, move_str: str) -> Optional[chess.Move]:
         try:
             move = chess.Move.from_uci(move_str)
             if move in self.board.legal_moves:
                 return move
             else:
-                print(f"Illegal move: {move_str}")
                 return None
         except ValueError:
-            print(f"Invalid move format: {move_str}")
             return None
-        
-    def _add_to_history(self, move, previous_board):
-        self.move_history.append((move, previous_board))
+
+    def _add_to_history(self, move, previous_fen):
+        self.move_history.append((move, previous_fen))
 
     def get_move_history_uci(self):
         # Some entries (from load_fen with record_history=True) may store
@@ -172,12 +71,12 @@ class ChessGame:
         if not self.move_history:
             print("No moves to undo.")
             return False
-            
-        #undo the last move and board state
-        move, previous_board = self.move_history.pop()
 
-        # restore the previous board state
-        self.board = previous_board
+        # Undo the last move and board state
+        move, previous_fen = self.move_history.pop()
+
+        # Restore the previous board state
+        self.board.set_fen(previous_fen)
 
         # If the popped entry was a sentinel from load_fen(record_history=True)
         # then move will be None — report a different message in that case.
@@ -188,7 +87,7 @@ class ChessGame:
 
         self.display_board()
         return True
- 
+
     def get_legal_moves(self):
         return [move.uci() for move in self.board.legal_moves]
 
@@ -212,21 +111,21 @@ class ChessGame:
         if self.board.is_checkmate():
             winner = "Black" if self.board.turn else "White"
             return f"Checkmate! {winner} wins."
-        
+
         elif self.board.is_stalemate():
             return "Stalemate! Game is a draw."
-        
+
         elif self.board.is_insufficient_material():
             return "Insufficient material! Game is a draw."
-        
+
         elif self.board.is_seventyfive_moves():
             return "75-move rule! Game is a draw."
-        
+
         elif self.board.is_fivefold_repetition():
             return "Fivefold repetition! Game is a draw."
-        
+
         return None
-    
+
     def is_game_over(self):
         return self.board.is_game_over()
 
@@ -241,11 +140,11 @@ class ChessGame:
         the move history is cleared (preserves previous behavior).
         """
         try:
-            previous_board = self.board.copy()
+            previous_fen = self.board.fen()
             self.board.set_fen(fen)
             if record_history:
-                # store a sentinel move None together with the previous board so undo_move works
-                self.move_history.append((None, previous_board))
+                # Store a sentinel move None together with the previous FEN so undo_move works
+                self.move_history.append((None, previous_fen))
             else:
                 self.move_history.clear()
 
@@ -258,9 +157,12 @@ class ChessGame:
 
     def get_state_json(self):
         """Return a JSON-serializable dict of the current game state for UI/tests."""
+        result = self.get_game_result()
         return {
             "fen": self.get_fen(),
             "turn": "white" if self.board.turn else "black",
             "analysis": self.current_analysis,
-            "legal_moves": self.get_legal_moves()
+            "legal_moves": self.get_legal_moves(),
+            "game_over": self.is_game_over(),
+            "result": result
         }
