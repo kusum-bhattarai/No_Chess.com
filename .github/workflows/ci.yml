@@ -27,8 +27,8 @@ jobs:
         id: pytest
         continue-on-error: true
         run: |
-          pytest --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-report=html -q
-        # continue-on-error so we can collect artifacts/logs even when tests fail
+          pytest --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-report=html -q | tee pytest-output.txt
+        # continue-on-error to collect artifacts/logs even when tests fail
 
       - name: Check htmlcov exists
         id: check_htmlcov
@@ -47,10 +47,17 @@ jobs:
           path: htmlcov/**
 
       - name: Upload pytest logs (debug if tests failed)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-output
+          path: pytest-output.txt
+
+      - name: Upload pytest cache (debug if tests failed)
         if: steps.pytest.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-logs
+          name: pytest-cache
           path: .pytest_cache/**
 
       - name: Fail if tests failed
