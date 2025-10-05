@@ -1,8 +1,8 @@
 import chess
 from collections import deque
 from typing import Dict, List, Optional
-from ui.terminal_ui import TerminalUI
-from utils import get_piece_symbols  
+from backend.ui.terminal_ui import TerminalUI
+from backend.utils import get_piece_symbols  
 
 class ChessGame:
     def __init__(self, max_score: int = 500):

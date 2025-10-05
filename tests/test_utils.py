@@ -1,5 +1,5 @@
 import pytest
-from utils import format_score, format_pv, get_evaluation_bar, get_piece_symbols
+from backend.utils import format_score, format_pv, get_evaluation_bar, get_piece_symbols
 
 def test_format_score():
     assert format_score(100, False) == "1.00"
