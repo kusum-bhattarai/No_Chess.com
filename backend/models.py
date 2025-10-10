@@ -28,3 +28,20 @@ class GameStateResponse(BaseModel):
     analysis: Dict
     game_over: bool
     result: Optional[str] = None
+
+class ReviewMove(BaseModel):
+    move_number: int
+    move: str
+    player: str
+    pre_eval: Dict
+    post_eval: Dict
+    best_move: Optional[str] = None
+    pv: str
+    comment: str
+
+class PgnReviewResponse(BaseModel):
+    review_data: List[ReviewMove]
+    event: str
+    white: str
+    black: str
+    result: str

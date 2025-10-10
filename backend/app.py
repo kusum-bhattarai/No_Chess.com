@@ -1,11 +1,14 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, WebSocket
-from .models import Mode, MoveRequest, StartGameRequest, AnalysisResponse, GameStateResponse
+from .models import Mode, MoveRequest, StartGameRequest, AnalysisResponse, GameStateResponse, PgnReviewResponse
 from .engine import StockfishEngine
 from .chess_game import ChessGame
 from typing import Dict
 import asyncio
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect, File, UploadFile
+from .pgnReview import PgnReviewer
+import shutil
+import chess.pgn
 
 # Global in-memory sessions (dict: session_id -> ChessGame)
 sessions: Dict[str, ChessGame] = {}
@@ -109,6 +112,38 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     except Exception as e:
         print(f"An error occurred in the websocket: {e}")
         await websocket.close(code=1011)
+
+@app.post("/review_pgn", response_model=PgnReviewResponse)
+def review_pgn(pgn_file: UploadFile = File(...)):
+    # Save the uploaded file temporarily
+    file_path = f"/tmp/{pgn_file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(pgn_file.file, buffer)
+
+    try:
+        with StockfishEngine() as engine:
+            reviewer = PgnReviewer(engine)
+            review_data = reviewer.perform_review(file_path)
+
+            # Extract headers for the response
+            with open(file_path) as pgn:
+                game = chess.pgn.read_game(pgn)
+                headers = game.headers if game else {}
+
+        return {
+            "review_data": review_data,
+            "event": headers.get("Event", "Unknown Event"),
+            "white": headers.get("White", "Unknown Player"),
+            "black": headers.get("Black", "Unknown Player"),
+            "result": headers.get("Result", "*"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to review PGN: {str(e)}")
+    finally:
+        # Clean up the temporary file
+        import os
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 # Add a simple health check endpoint for testing
 @app.get("/")
