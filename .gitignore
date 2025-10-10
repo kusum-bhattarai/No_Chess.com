@@ -5,3 +5,9 @@ __pycache__
 .coverage
 coverage.xml
 .env
+
+node_modules/
+dist/
+build/
+npm-debug.log
+yarn-error.log  
