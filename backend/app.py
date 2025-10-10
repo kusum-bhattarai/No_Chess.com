@@ -1,10 +1,11 @@
-# backend/app.py
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from .models import Mode, MoveRequest, StartGameRequest, AnalysisResponse, GameStateResponse
 from .engine import StockfishEngine
 from .chess_game import ChessGame
 from typing import Dict
+import asyncio
+from fastapi import WebSocket, WebSocketDisconnect
 
 # Global in-memory sessions (dict: session_id -> ChessGame)
 sessions: Dict[str, ChessGame] = {}
@@ -84,6 +85,30 @@ def analyze(session_id: str, game: ChessGame = Depends(get_session)):
         return AnalysisResponse(**analysis)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    
+@app.websocket("/ws/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    try:
+        game = get_session(session_id)
+        while True:
+            # Get the latest analysis
+            moves = game.get_move_history_uci()
+            with StockfishEngine() as engine:
+                engine.set_position(moves)
+                analysis = engine.analyze_position()
+                game.set_analysis(analysis)
+
+            # Send the analysis to the client
+            await websocket.send_json(analysis)
+
+            # Wait for a short time before sending the next update
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        print(f"Client disconnected from session {session_id}")
+    except Exception as e:
+        print(f"An error occurred in the websocket: {e}")
+        await websocket.close(code=1011)
 
 # Add a simple health check endpoint for testing
 @app.get("/")

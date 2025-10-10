@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch, MagicMock
 from .app import app, sessions
+from .chess_game import ChessGame
 import chess
 
 client = TestClient(app)
@@ -235,3 +236,27 @@ def test_available_routes():
     
     for expected_route in expected_routes:
         assert expected_route in routes, f"Route {expected_route} not found in {routes}"
+
+def test_websocket_endpoint():
+    """Test the WebSocket endpoint for real-time analysis"""
+    with patch('backend.app.StockfishEngine') as mock_engine_class:
+        # Mock the engine
+        mock_engine = MagicMock()
+        mock_engine.analyze_position.return_value = {
+            "score": 150, "is_mate": False, "best_move": "e2e4", "pv": ["e2e4", "e7e5"], "depth": 20
+        }
+        mock_engine_class.return_value.__enter__ = Mock(return_value=mock_engine)
+        mock_engine_class.return_value.__exit__ = Mock(return_value=None)
+
+        # Manually create a session for testing
+        import uuid
+        session_id = str(uuid.uuid4())
+        # --- THIS IS THE FIX ---
+        sessions[session_id] = ChessGame() 
+        # -----------------------
+
+        # Test the WebSocket connection
+        with client.websocket_connect(f"/ws/{session_id}") as websocket:
+            data = websocket.receive_json()
+            assert data["score"] == 150
+            assert data["best_move"] == "e2e4"
