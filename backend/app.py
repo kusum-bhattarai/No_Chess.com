@@ -9,6 +9,7 @@ from fastapi import WebSocket, WebSocketDisconnect, File, UploadFile
 from .pgnReview import PgnReviewer
 import shutil
 import chess.pgn
+from fastapi.middleware.cors import CORSMiddleware
 
 # Global in-memory sessions (dict: session_id -> ChessGame)
 sessions: Dict[str, ChessGame] = {}
@@ -21,6 +22,18 @@ async def lifespan(app: FastAPI):
     pass
 
 app = FastAPI(title="NoChess API", description="Terminal Chess to Web", version="0.1.0", lifespan=lifespan)
+origins = [
+    "http://localhost:5173",  
+    "http://127.0.0.1:5173", 
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allow all methods (GET, POST, etc.)
+    allow_headers=["*"], # Allow all headers
+)
 
 # Dependency to get session (create if new)
 def get_session(session_id: str) -> ChessGame:
