@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch, MagicMock
 from .app import app, sessions
 from .chess_game import ChessGame
 import chess
+import chess.pgn
 
 client = TestClient(app)
 
@@ -260,3 +261,43 @@ def test_websocket_endpoint():
             data = websocket.receive_json()
             assert data["score"] == 150
             assert data["best_move"] == "e2e4"
+
+def test_review_pgn_endpoint():
+    """Test the PGN review endpoint with a file upload."""
+    pgn_content = '[Event "Test Game"]\\n1. e4 e5 *'
+
+    with patch('backend.app.StockfishEngine') as mock_engine_class, \
+         patch('shutil.copyfileobj'), \
+         patch('os.remove'):
+
+        # Mock the engine
+        mock_engine = MagicMock()
+        mock_engine.analyze_position.return_value = {
+            "score": 50, "is_mate": False, "best_move": "e2e4", "pv": ["e2e4"], "depth": 10
+        }
+        mock_engine_class.return_value.__enter__.return_value = mock_engine
+
+        # --- THIS IS THE FIX ---
+        # Create a mock for a single chess move
+        mock_move = MagicMock()
+        mock_move.uci.return_value = 'e2e4'
+
+        # Mock the game object returned by chess.pgn.read_game
+        mock_game = MagicMock()
+        mock_game.headers = {"Event": "Test Game", "White": "Player A", "Black": "Player B", "Result": "1-0"}
+        # Configure mainline_moves to return a list containing our mock move
+        mock_game.mainline_moves.return_value = [mock_move]
+        # -----------------------
+
+        # The PgnReviewer calls read_game, so we patch that call.
+        with patch('backend.pgnReview.chess.pgn.read_game', return_value=mock_game):
+            response = client.post(
+                "/review_pgn",
+                files={"pgn_file": ("tmp_test.pgn", pgn_content, "application/x-chess-pgn")}
+            )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["event"] == "Test Game"
+    assert "review_data" in data
+    assert len(data["review_data"]) > 0 # PgnReviewer should now produce data
