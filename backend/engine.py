@@ -2,12 +2,16 @@ import subprocess
 import select
 import time
 import re
+import os
+from dotenv import load_dotenv
 from typing import List, Dict
 
+load_dotenv()
+
 class StockfishEngine:
-    def __init__(self, mode: str = "intermediate", executable_path: str = 'stockfish_binary/stockfish'):
-        #get the stockfish path, (use .exe for windows devices)
-        self.executable_path = executable_path
+    def __init__(self, mode: str = "intermediate", executable_path: str = None):
+
+        self.executable_path = executable_path or os.getenv("STOCKFISH_PATH", "stockfish_binary/stockfish")
         
         #modes mapped to depths
         depth_map = {
