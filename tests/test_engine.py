@@ -1,7 +1,7 @@
 import pytest
 import subprocess
 from unittest.mock import Mock, patch
-from engine import StockfishEngine
+from backend.engine import StockfishEngine  
 
 def test_init_with_validation(mock_engine_env):
     # Using the mock_engine_env fixture prevents launching the real binary

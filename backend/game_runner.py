@@ -1,7 +1,7 @@
 import argparse
 from typing import Optional
-from chess_game import ChessGame
-from engine import StockfishEngine
+from .chess_game import ChessGame
+from .engine import StockfishEngine
 
 class GameRunner:
     def __init__(self, engine: StockfishEngine, game: ChessGame):

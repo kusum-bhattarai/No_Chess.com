@@ -2,8 +2,8 @@ import chess
 import chess.pgn
 import os
 from typing import List, Dict
-from utils import format_score, format_pv
-from ui.terminal_ui import TerminalUI
+from .utils import format_score, format_pv
+from .ui.terminal_ui import TerminalUI
 
 class PgnReviewer:
     def __init__(self, engine, quick_mode: bool = False, review_depth: int = 20):

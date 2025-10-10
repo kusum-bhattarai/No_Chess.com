@@ -21,5 +21,5 @@ def mock_engine_env(mocker, mock_popen):
     # Ensure Popen returns our mock process
     mocker.patch('subprocess.Popen', return_value=mock_popen)
     # During __init__, engine waits for uci/readyok — no-op that in unit tests
-    mocker.patch('engine.StockfishEngine._wait_for_response', return_value=None)
+    mocker.patch('backend.engine.StockfishEngine._wait_for_response', return_value=None)
     return mock_popen

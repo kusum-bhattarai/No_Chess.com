@@ -1,7 +1,7 @@
 import os
 import chess
 from typing import Dict
-from utils import format_score, get_evaluation_bar, get_piece_symbols, format_pv
+from ..utils import format_score, get_evaluation_bar, get_piece_symbols, format_pv
 
 class TerminalUI:
     def __init__(self, max_score: int = 500):

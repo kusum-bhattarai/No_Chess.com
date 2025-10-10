@@ -1,9 +1,9 @@
 import argparse
 import os
-from engine import StockfishEngine
-from chess_game import ChessGame
-from pgnReview import PgnReviewer
-from game_runner import GameRunner
+from backend.engine import StockfishEngine
+from backend.chess_game import ChessGame
+from backend.pgnReview import PgnReviewer
+from backend.game_runner import GameRunner
 
 def create_parser():
     parser = argparse.ArgumentParser(description="NoChess.com - Terminal Chess Game")

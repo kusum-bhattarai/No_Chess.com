@@ -2,7 +2,7 @@ import pytest
 import io
 from unittest.mock import Mock, patch
 import chess.pgn
-from pgnReview import PgnReviewer
+from backend.pgnReview import PgnReviewer
 
 @pytest.fixture
 def mock_engine():

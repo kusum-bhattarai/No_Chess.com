@@ -1,21 +1,30 @@
 import chess
 from collections import deque
 from typing import Dict, List, Optional
-from backend.ui.terminal_ui import TerminalUI
-from backend.utils import get_piece_symbols  
+from .ui.terminal_ui import TerminalUI
+from .utils import get_piece_symbols
 
 class ChessGame:
     def __init__(self, max_score: int = 500):
         self.board = chess.Board()
-        self.move_history = deque()  # Stores (move, fen_before)
+        # To store history for undo functionality
+        self.move_history = deque()
+        # To store current analysis
         self.current_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
-        self.ui = TerminalUI(max_score)
+        # UI instance for display
+        self.ui = TerminalUI(max_score=max_score)
+        # Piece symbols for legal moves print
+        self.piece_symbols = get_piece_symbols()
 
+    # Sets the analysis data
     def set_analysis(self, analysis: Dict):
         self.current_analysis = analysis
 
     def display_board(self, clear: bool = True):
         self.ui.display_board(self.board, self.current_analysis, clear)
+
+    def display_game_state(self):
+        self.ui.display_game_state(self.board)
 
     def display_analysis(self, analysis: Dict):
         self.ui.display_analysis(self.board, analysis)
@@ -25,9 +34,9 @@ class ChessGame:
             move = self.parse_move(move_str)
             if not move:
                 return False
-            fen_before = self.board.fen()
+            previous_fen = self.board.fen()
             self.board.push(move)
-            self.move_history.append((move, fen_before))
+            self.move_history.append((move, previous_fen))
             self.display_board()
             return True
         except chess.InvalidMoveError:
@@ -50,63 +59,95 @@ class ChessGame:
         except ValueError:
             return None
 
-    def undo_move(self) -> bool:
+    def _add_to_history(self, move, previous_fen):
+        self.move_history.append((move, previous_fen))
+
+    def get_move_history_uci(self):
+        # Some entries (from load_fen with record_history=True) may store
+        # a sentinel None for the move. Filter those out to avoid errors.
+        return [move.uci() for move, _ in self.move_history if move is not None]
+
+    def undo_move(self):
         if not self.move_history:
             print("No moves to undo.")
             return False
-        _, fen_before = self.move_history.pop()
-        self.board.set_fen(fen_before)
-        print("Move undone.")
+
+        # Undo the last move and board state
+        move, previous_fen = self.move_history.pop()
+
+        # Restore the previous board state
+        self.board.set_fen(previous_fen)
+
+        # If the popped entry was a sentinel from load_fen(record_history=True)
+        # then move will be None — report a different message in that case.
+        if move is None:
+            print("Position load undone.")
+        else:
+            print("Move undone.")
+
         self.display_board()
         return True
 
-    def get_legal_moves(self) -> List[str]:
+    def get_legal_moves(self):
         return [move.uci() for move in self.board.legal_moves]
 
     def print_legal_moves(self):
         moves = self.get_legal_moves()
         print(f"Legal moves ({len(moves)}):")
+
         positions = {}
         for move in moves:
             start = move[:2]
             if start not in positions:
                 positions[start] = []
             positions[start].append(move[2:])
-        symbols = get_piece_symbols()
+
         for start, ends in positions.items():
             piece = self.board.piece_at(chess.parse_square(start))
-            piece_symbol = symbols.get(piece.symbol(), piece.symbol()) if piece else "?"
+            piece_symbol = self.piece_symbols.get(piece.symbol(), piece.symbol()) if piece else "?"
             print(f"{piece_symbol} {start} → {', '.join(ends)}")
 
-    def get_game_result(self) -> Optional[str]:
+    def get_game_result(self):
         if self.board.is_checkmate():
             winner = "Black" if self.board.turn else "White"
             return f"Checkmate! {winner} wins."
+
         elif self.board.is_stalemate():
             return "Stalemate! Game is a draw."
+
         elif self.board.is_insufficient_material():
             return "Insufficient material! Game is a draw."
-        elif self.board.can_claim_threefold_repetition():
-            return "Threefold repetition! Game is a draw."
+
         elif self.board.is_seventyfive_moves():
             return "75-move rule! Game is a draw."
+
         elif self.board.is_fivefold_repetition():
             return "Fivefold repetition! Game is a draw."
+
         return None
 
-    def is_game_over(self) -> bool:
+    def is_game_over(self):
         return self.board.is_game_over()
 
-    def get_fen(self) -> str:
+    def get_fen(self):
         return self.board.fen()
 
-    def load_fen(self, fen: str, record_history: bool = False) -> bool:
+    def load_fen(self, fen, record_history: bool = False):
+        """Load a FEN into the board.
+
+        If record_history is True, the previous board state is pushed onto the
+        move history so the load can be undone with `undo_move()`. By default
+        the move history is cleared (preserves previous behavior).
+        """
         try:
+            previous_fen = self.board.fen()
+            self.board.set_fen(fen)
             if record_history:
-                self.move_history.append((None, self.board.fen()))  # Sentinel for undo
+                # Store a sentinel move None together with the previous FEN so undo_move works
+                self.move_history.append((None, previous_fen))
             else:
                 self.move_history.clear()
-            self.board.set_fen(fen)
+
             print("Position loaded successfully.")
             self.display_board()
             return True
@@ -114,7 +155,8 @@ class ChessGame:
             print(f"Invalid FEN: {e}")
             return False
 
-    def get_state_json(self) -> Dict:
+    def get_state_json(self):
+        """Return a JSON-serializable dict of the current game state for UI/tests."""
         result = self.get_game_result()
         return {
             "fen": self.get_fen(),
@@ -124,6 +166,3 @@ class ChessGame:
             "game_over": self.is_game_over(),
             "result": result
         }
-
-    def get_move_history_uci(self) -> List[str]:
-        return [move.uci() for move, _ in self.move_history]
