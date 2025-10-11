@@ -1,19 +1,32 @@
-// src/App.jsx
 import { useState } from 'react';
 import LandingScreen from './components/LandingScreen';
-import DifficultyScreen from './components/DifficultyScreen'; // 1. Import the new component
+import DifficultyScreen from './components/DifficultyScreen';
+import GameScreen from './components/GameScreen'; 
+import apiClient from './api'; 
 
 function App() {
-  const [view, setView] = useState('landing'); // 'landing', 'difficulty', 'game', 'review'
+  const [view, setView] = useState('landing');
+  // Add state to hold the current game data
+  const [game, setGame] = useState(null); 
 
-  const handleStartGame = (difficulty) => {
-    console.log(`Starting game with difficulty: ${difficulty}`);
-    // In the next step, we will call the backend API here.
+  // Update the handler to call the backend
+  const handleStartGame = async (difficulty) => {
+    try {
+      console.log(`Requesting new game with difficulty: ${difficulty}`);
+      const response = await apiClient.post('/start_game', { mode: difficulty });
+      setGame(response.data); // Store the game data from the backend
+      setView('game'); // Switch to the game view
+    } catch (error) {
+      console.error("Failed to start game:", error);
+      alert("Error: Could not start a new game. Is the backend server running?");
+    }
   };
 
   const renderView = () => {
     switch (view) {
-      // 2. Add the 'difficulty' case
+      // 5. Add the 'game' case
+      case 'game':
+        return <GameScreen gameData={game} />;
       case 'difficulty':
         return (
           <DifficultyScreen 
@@ -25,18 +38,14 @@ function App() {
       default:
         return (
           <LandingScreen 
-            onPlay={() => setView('difficulty')} // 3. Update onPlay to change the view
+            onPlay={() => setView('difficulty')}
             onReview={() => console.log("User wants to review")} 
           />
         );
     }
   };
 
-  return (
-    <div style={containerStyle}>
-      {renderView()}
-    </div>
-  );
+  return <div style={containerStyle}>{renderView()}</div>;
 }
 
 const containerStyle = {
