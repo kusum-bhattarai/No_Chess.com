@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { colors } from '../styles';
 import EvaluationBar from './EvaluationBar';
+import AnalysisSidebar from './AnalysisSidebar'; 
 
 // --- Component Styles ---
 const gameScreenContainerStyle = {
@@ -11,7 +12,7 @@ const gameScreenContainerStyle = {
   alignItems: 'center',
   width: '100vw',
   height: '100vh',
-  padding: '2vh', // Consistent padding on top and bottom
+  padding: '2vh',
   boxSizing: 'border-box',
 };
 
@@ -21,10 +22,10 @@ const gameAreaStyle = {
   alignItems: 'center',
   gap: '20px',
   width: '100%',
-  height: '100%', // Fill the padded container
+  height: '100%',
+  maxWidth: '1400px', // Keep a max width for large screens
 };
 
-// This wrapper will be a perfect square, containing the board
 const boardWrapperStyle = {
   position: 'relative',
   width: '100%',
@@ -42,25 +43,22 @@ const sessionIdStyle = {
 // --- The Component ---
 function GameScreen({ gameData }) {
   const [boardContainerSize, setBoardContainerSize] = useState(0);
-  const gameAreaRef = useRef(null); // Ref for the main game area
+  const gameAreaRef = useRef(null);
 
   useEffect(() => {
     function handleResize() {
       if (gameAreaRef.current) {
-        // The size of our board container is the available height,
-        // which is the most stable dimension.
         const newSize = gameAreaRef.current.offsetHeight;
         setBoardContainerSize(newSize);
       }
     }
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Set initial size
+    handleResize();
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // We set the width of the board container to be the same as the calculated height
   const squareContainer = {
     width: boardContainerSize,
     height: boardContainerSize,
@@ -69,7 +67,6 @@ function GameScreen({ gameData }) {
   return (
     <div style={gameScreenContainerStyle}>
       <div ref={gameAreaRef} style={gameAreaStyle}>
-        {/* Render only when size is calculated */}
         {boardContainerSize > 0 && (
           <>
             <div style={{ height: boardContainerSize }}>
@@ -89,6 +86,11 @@ function GameScreen({ gameData }) {
                   customLightSquareStyle={{ backgroundColor: colors.boardLight }}
                 />
               </div>
+            </div>
+            
+            {/* Add the new AnalysisSidebar here */}
+            <div style={{ height: boardContainerSize }}>
+              <AnalysisSidebar analysis={gameData.analysis} />
             </div>
           </>
         )}
