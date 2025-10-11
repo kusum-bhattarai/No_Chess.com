@@ -1,5 +1,5 @@
 import React from 'react';
-import { colors, buttonStyle } from '../styles';
+import { colors, buttonStyle, buttonHoverStyle } from '../styles';
 
 const landingContainerStyle = {
   display: 'flex',

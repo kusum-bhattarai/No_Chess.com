@@ -7,9 +7,6 @@ export const colors = {
     boardDark: '#A7C4BC', // Pastel green for board squares (cute, nature-inspired)
     evalPositive: '#86C67C', // Green for good scores
     evalNegative: '#D87070', // Red for bad scores
-    // for eval bar transitions
-    evalPositive: '#86C67C',
-    evalNegative: '#D87070',
 };
 
 export const AppStyle = {

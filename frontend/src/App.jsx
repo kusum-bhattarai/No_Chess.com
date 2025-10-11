@@ -5,6 +5,7 @@ import GameScreen from './components/GameScreen';
 import PgnUploadModal from './components/PgnUploadModal'; 
 import apiClient from './api';
 import { AppStyle } from './styles'; 
+import ReviewScreen from './components/ReviewScreen';
 
 function App() {
   const [view, setView] = useState('landing');
@@ -48,7 +49,7 @@ function App() {
   const renderView = () => {
     switch (view) {
       case 'game':
-        return <GameScreen gameData={game} onMove={handleMove} />;
+        return <GameScreen gameData={game} onMove={handleMove} onBack={() => setView('landing')} />;
       case 'difficulty':
         return (
           <DifficultyScreen
@@ -57,7 +58,7 @@ function App() {
           />
         );
       case 'review':
-        return <div>Review Screen Placeholder - Data: {JSON.stringify(reviewData)}</div>; // Placeholder
+        return <ReviewScreen reviewData={reviewData} onBack={() => setView('landing')} />;
       case 'landing':
       default:
         return (

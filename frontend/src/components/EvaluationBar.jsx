@@ -14,7 +14,7 @@ const barContainerStyle = {
 
 const barStyle = {
   width: '100%',
-  transition: 'height 0.5s ease-in-out',
+  transition: 'height 0.5s ease-in-out', 
 };
 
 const whiteBarSyle = {

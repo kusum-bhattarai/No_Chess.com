@@ -30,6 +30,12 @@ class StockfishEngine:
         depth = depth_map.get(mode, 12)
         self.depth_limit = chess.engine.Limit(depth=depth)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def close(self):
         """A dedicated method to properly close the engine process."""
         self.engine.quit()

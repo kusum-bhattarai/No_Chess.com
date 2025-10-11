@@ -71,7 +71,7 @@ function PgnUploadModal({ onClose, onUpload }) {
     formData.append('pgn_file', file);
 
     try {
-      const response = await onUpload(formData); // Call parent handler
+      await onUpload(formData); // Call parent handler
       onClose(); // Close modal on success
       // Parent will handle navigation
     } catch (err) {
