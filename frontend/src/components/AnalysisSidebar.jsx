@@ -24,6 +24,9 @@ const titleStyle = {
 
 const infoRowStyle = {
   marginBottom: '15px',
+  transition: 'background-color 0.3s ease', // Add for hover
+  padding: '5px',
+  borderRadius: '4px',
 };
 
 const labelStyle = {
