@@ -1,25 +1,45 @@
-function LandingScreen({ onPlay, onReview }) {
-  const buttonStyle = {
-    padding: '20px 40px',
-    fontSize: '1.5rem',
-    margin: '0 20px',
-    cursor: 'pointer',
-    borderRadius: '8px',
-    border: 'none',
-    backgroundColor: '#504E48',
-    color: 'white',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-  };
+import React from 'react';
+import { colors, buttonStyle } from '../styles';
 
+const landingContainerStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100vh',
+  textAlign: 'center',
+};
+
+const titleStyle = {
+  fontSize: '2.5rem',
+  marginBottom: '40px',
+  color: colors.primary,
+};
+
+const buttonContainerStyle = {
+  display: 'flex',
+  gap: '20px',
+};
+
+function LandingScreen({ onPlay, onReview }) {
   return (
-    <div style={{ textAlign: 'center' }}>
-      <h1>NoChess.com</h1>
-      <p style={{ marginBottom: '40px', fontSize: '1.2rem' }}>Choose your mode</p>
-      <div>
-        <button style={buttonStyle} onClick={onPlay}>
+    <div style={landingContainerStyle}>
+      <h1 style={titleStyle}>Welcome to NoChess</h1>
+      <div style={buttonContainerStyle}>
+        <button
+          style={buttonStyle}
+          onMouseOver={(e) => Object.assign(e.target.style, buttonHoverStyle)}
+          onMouseOut={(e) => Object.assign(e.target.style, buttonStyle)}
+          onClick={onPlay}
+        >
           Play Game
         </button>
-        <button style={buttonStyle} onClick={onReview}>
+        <button
+          style={buttonStyle}
+          onMouseOver={(e) => Object.assign(e.target.style, buttonHoverStyle)}
+          onMouseOut={(e) => Object.assign(e.target.style, buttonStyle)}
+          onClick={onReview}
+        >
           Review PGN
         </button>
       </div>
