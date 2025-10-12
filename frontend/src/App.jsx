@@ -37,8 +37,9 @@ function App() {
     }
   };
 
-  const handlePgnUpload = async (formData) => {
-    const response = await apiClient.post('/review_pgn', formData, {
+  const handlePgnUpload = async (formData, quickMode) => {
+    const q = quickMode ? '?quick_mode=true' : '';
+    const response = await apiClient.post(`/review_pgn${q}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     setReviewData(response.data);
@@ -46,10 +47,22 @@ function App() {
     return response; // For modal success
   };
 
+  const handleResign = async () => {
+    if (!game) return;
+    const { data } = await apiClient.post(`/resign/${game.session_id}`);
+    setGame(data);
+  };
+
+  const handleRestart = async () => {
+    if (!game) return;
+    const { data } = await apiClient.post(`/restart/${game.session_id}`);
+    setGame(data);
+  };
+
   const renderView = () => {
     switch (view) {
       case 'game':
-        return <GameScreen gameData={game} onMove={handleMove} onBack={() => setView('landing')} />;
+        return <GameScreen gameData={game} onMove={handleMove} onBack={() => setView('landing')} onResign={handleResign} onRestart={handleRestart} />;
       case 'difficulty':
         return (
           <DifficultyScreen
