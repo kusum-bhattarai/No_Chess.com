@@ -76,7 +76,7 @@ const reviewScreenStyle = {
     justifyContent:'center', 
     height:'100vh', 
     padding:'20px', 
-    color:'#E0E0E0' };
+    color:'#686767ff' };
 
 const reviewContainerStyle = { 
     display:'flex', 
