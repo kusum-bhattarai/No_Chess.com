@@ -24,7 +24,7 @@ const buttonContainerStyle = {
 function LandingScreen({ onPlay, onReview }) {
   return (
     <div style={landingContainerStyle}>
-      <h1 style={titleStyle}>Welcome to NoChess</h1>
+      <h1 style={titleStyle}>Welcome to NoChess.com</h1>
       <div style={buttonContainerStyle}>
         <button
           style={buttonStyle}
