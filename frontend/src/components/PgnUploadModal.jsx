@@ -55,6 +55,7 @@ function PgnUploadModal({ onClose, onUpload }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [quickMode, setQuickMode] = useState(false);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -71,7 +72,7 @@ function PgnUploadModal({ onClose, onUpload }) {
     formData.append('pgn_file', file);
 
     try {
-      await onUpload(formData); // Call parent handler
+      await onUpload(formData, quickMode);
       onClose(); // Close modal on success
       // Parent will handle navigation
     } catch (err) {
@@ -87,6 +88,12 @@ function PgnUploadModal({ onClose, onUpload }) {
       <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}> {/* Prevent close on content click */}
         <h2 style={titleStyle}>Upload PGN File</h2>
         <input type="file" accept=".pgn" style={inputStyle} onChange={handleFileChange} />
+        <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+          <label>
+            <input type="checkbox" checked={quickMode} onChange={(e)=>setQuickMode(e.target.checked)} />
+            {' '}Quick review (faster, shallower depth)
+          </label>
+        </div>
         {error && <p style={errorStyle}>{error}</p>}
         {loading && <p style={loadingStyle}>Uploading...</p>}
         <button
