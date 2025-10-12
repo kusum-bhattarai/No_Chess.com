@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Literal
 from enum import Enum
 
 class Mode(str, Enum):
@@ -17,17 +17,25 @@ class AnalysisResponse(BaseModel):
     score: float
     is_mate: bool
     best_move: Optional[str] = None
-    pv: List[str]
-    depth: int
+    pv: List[str] = []
+    depth: Optional[int] = None
 
 class GameStateResponse(BaseModel):
     session_id: str
     fen: str
-    turn: str
+    turn: Literal["white", "black"]
     legal_moves: List[str]
-    analysis: Dict
+    analysis: Optional[AnalysisResponse] = None
     game_over: bool
-    result: Optional[str] = None
+    result: Optional[str] = None       # "1-0" | "0-1" | "1/2-1/2"
+    status: Optional[str] = None       # "Checkmate", "Stalemate", etc.
+    user_color: Literal["white", "black"]
+    in_check: bool = False
+    in_checkmate: bool = False
+    in_stalemate: bool = False
+    is_draw: bool = False
+    draw_reason: Optional[str] = None
+    last_move: Optional[str] = None
 
 class ReviewMove(BaseModel):
     move_number: int

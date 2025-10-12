@@ -4,16 +4,18 @@ FROM python:3.12-slim
 # Set the working directory in the container
 WORKDIR /app
 
+# Install Stockfish from the official Debian repository
+RUN apt-get update && apt-get install -y stockfish
+
+# Add the directory containing the stockfish executable to the system's PATH
+ENV PATH="${PATH}:/usr/games"
+
 # Copy dependency files and install them
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code and Stockfish binary
+# Copy application code
 COPY ./backend /app/backend
-COPY ./stockfish_binary /app/stockfish_binary
-
-# Make the Stockfish binary executable
-RUN chmod +x /app/stockfish_binary/stockfish
 
 # Expose the port the app runs on
 EXPOSE 8000

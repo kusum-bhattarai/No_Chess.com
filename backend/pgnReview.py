@@ -1,6 +1,7 @@
 import chess
 import chess.pgn
 import os
+import sys
 from typing import List, Dict
 from .utils import format_score, format_pv
 from .ui.terminal_ui import TerminalUI
@@ -9,155 +10,143 @@ class PgnReviewer:
     def __init__(self, engine, quick_mode: bool = False, review_depth: int = 20):
         self.engine = engine
         self.board = chess.Board()  # The board specifically for review purposes
-        self.ui = TerminalUI()  # Reuse shared UI for display
+        self.ui = TerminalUI()      # Reuse shared UI for display
         self.quick_mode = quick_mode
         self.review_depth = 10 if quick_mode else review_depth
+
+        # Headless/server mode detection: no terminal → suppress clear/terminal UI
+        term = os.getenv("TERM", "")
+        self.headless = (not term or term == "dumb" or not sys.stdout.isatty())
 
     def display_board_for_review(self, analysis: Dict):
         """
         Displays the board state during review, including the evaluation bar.
-        Delegates to TerminalUI for consistency.
+        In headless/server environments, this is a no-op to avoid TERM warnings.
         """
-        self.ui.display_board(self.board, analysis, clear=True)
+        if self.headless:
+            return
+        try:
+            self.ui.display_board(self.board, analysis, clear=True)
+        except Exception:
+            # Never let terminal UI failures affect API behavior
+            pass
 
     def get_board_move_history_uci(self):
         """Helper to get move history for the review board."""
         return [move.uci() for move in self.board.move_stack]
 
     def _generate_comment(self, pre_analysis: Dict, post_analysis: Dict, move_uci: str) -> str:
-        """Generate comment based on analysis difference."""
-        if not pre_analysis.get('best_move') or move_uci == pre_analysis['best_move']:
-            return "Comment: Excellent move! Matches Stockfish's top recommendation."
+        """Generate comment with standard keywords."""
+        pre_best = pre_analysis.get('best_move')
+        pre_is_mate = pre_analysis.get('is_mate')
+        post_is_mate = post_analysis.get('is_mate')
+        pre_score = abs(pre_analysis['score']) if not pre_is_mate else 1000
+        post_score = abs(post_analysis['score']) if not post_is_mate else 1000
+        score_diff = pre_score - post_score  # positive => loss
 
-        # Calculate score diff (absolute, mate as 1000+)
-        pre_score = abs(pre_analysis['score']) if not pre_analysis['is_mate'] else 1000
-        post_score = abs(post_analysis['score']) if not post_analysis['is_mate'] else 1000
-        score_diff = pre_score - post_score  # Positive if loss
-
-        if post_score > pre_score + 50:
-            return "Comment: Brilliant! Better than Stockfish's recommendation."
-        elif pre_analysis['is_mate'] and not post_analysis['is_mate']:
-            return "Comment: Missed a forced mate!"
-        elif score_diff > 200:
-            return "Comment: Blunder! A significant loss of advantage."
-        elif score_diff > 50:
-            return "Comment: Mistake. There was a better move available."
-        else:
-            return "Comment: Inaccuracy. Not the most precise, but still reasonable."
+        if not pre_best or move_uci == pre_best:
+            return "Best: Matches engine recommendation."
+        if pre_is_mate and not post_is_mate:
+            return "Blunder: Missed a forced mate."
+        if post_score > pre_score + 100:
+            return "Brilliant: Improved beyond engine line."
+        if score_diff > 300:
+            return "Blunder: Major loss of advantage."
+        if score_diff > 100:
+            return "Mistake: Clear better move existed."
+        if score_diff > 30:
+            return "Inaccuracy: Slightly suboptimal."
+        return "Great: Solid move."
+    
+    def _read_first_valid_game(self, pgn_filepath: str):
+        try:
+            with open(pgn_filepath) as f:
+                while True:
+                    game_node = chess.pgn.read_game(f)
+                    if game_node is None:
+                        return None, []
+                    moves = list(game_node.mainline_moves())
+                    if moves:
+                        return game_node, moves
+        except Exception:
+            return None, []
 
     def perform_review(self, pgn_filepath: str, quick_mode: bool = False, pause: bool = False) -> List[Dict]:
-        """
-        Loads a PGN game, iterates through its moves, and provides Stockfish analysis
-        for each move, similar to a game review. Returns structured review data.
-
-        Args:
-            pgn_filepath: Path to PGN file.
-            quick_mode: If True, use reduced depth for faster review.
-
-        Returns:
-            List of dicts with review data per move.
-        """
-        if quick_mode:
-            self.review_depth = 10
-        else:
-            self.review_depth = 20
-
+        self.review_depth = 10 if quick_mode else 20
         review_data = []
         try:
-            with open(pgn_filepath) as pgn_file:
-                game_node = chess.pgn.read_game(pgn_file)
-                if game_node is None:
-                    print(f"No valid chess game found in {pgn_filepath}.")
-                    return review_data
-
-                # Reset the review board to the initial state
-                self.board = chess.Board()
-
-                # Collect moves into a list so we can validate the game has moves and
-                # avoid consuming a generator multiple times.
-                moves = list(game_node.mainline_moves())
-                if not moves:
-                    print(f"No valid chess game found in {pgn_filepath}.")
-                    return review_data
-
-                # Display game metadata
-                print(f"\n--- PGN Game Review: {game_node.headers.get('Event', 'Untitled Game')} ---")
-                print(f"White: {game_node.headers.get('White', '?')} vs. Black: {game_node.headers.get('Black', '?')}")
-                print(f"Result: {game_node.headers.get('Result', '*')}\n")
-
-                move_counter = 1
-                for move in moves:
-                    self.clear_screen()  # Still need this? UI has it, but call if needed
-
-                    # Analyze position *before* the move
-                    self.engine.set_position(self.get_board_move_history_uci())
-                    pre_move_analysis = self.engine.analyze_position(depth=self.review_depth)
-
-                    current_player_name = "White" if self.board.turn == chess.WHITE else "Black"
-
-                    # Make the move on the review board
-                    self.board.push(move)
-
-                    # Analyze position *after* the move
-                    self.engine.set_position(self.get_board_move_history_uci())
-                    post_move_analysis = self.engine.analyze_position(depth=self.review_depth)
-
-                    # Display the board and analysis
-                    self.display_board_for_review(post_move_analysis)  # Display after move
-
-                    print(f"\n--- Move {move_counter}. {current_player_name} plays {move.uci()} ---")
-                    print(f"Evaluation before move: {format_score(pre_move_analysis['score'], pre_move_analysis['is_mate'])}")
-                    print(f"Stockfish's Best Move (pre-move): {pre_move_analysis['best_move']}")
-                    print(f"Line (after Stockfish's best): {format_pv(pre_move_analysis['pv'][:4])}")
-                    print(f"Evaluation after move: {format_score(post_move_analysis['score'], post_move_analysis['is_mate'])}")
-
-                    # Generate and print comment
-                    comment = self._generate_comment(pre_move_analysis, post_move_analysis, move.uci())
-                    print(comment)
-
-                    # Add to review data
-                    review_data.append({
-                        "move_number": move_counter,
-                        "move": move.uci(),
-                        "player": current_player_name,
-                        "pre_eval": {
-                            "score": pre_move_analysis['score'],
-                            "is_mate": pre_move_analysis['is_mate'],
-                            "formatted": format_score(pre_move_analysis['score'], pre_move_analysis['is_mate'])
-                        },
-                        "post_eval": {
-                            "score": post_move_analysis['score'],
-                            "is_mate": post_move_analysis['is_mate'],
-                            "formatted": format_score(post_move_analysis['score'], post_move_analysis['is_mate'])
-                        },
-                        "best_move": pre_move_analysis['best_move'],
-                        "pv": format_pv(pre_move_analysis['pv'][:4]),
-                        "comment": comment
-                    })
-
-                    if pause:
-                        input("Press Enter to continue to the next move review...")
-                    move_counter += 1
-
-                print("\n--- End of Game Review ---")
-                # Show final state of the board in review
-                default_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
-                final_analysis = post_move_analysis if 'post_move_analysis' in locals() else default_analysis
-                self.clear_screen()
-                self.display_board_for_review(final_analysis)
-                print(f"Final game result: {game_node.headers.get('Result', '*')}")
-
+            game_node, moves = self._read_first_valid_game(pgn_filepath)
+            if game_node is None or not moves:
+                print(f"No valid chess game with moves found in {pgn_filepath}.")
                 return review_data
+
+            self.board = chess.Board()
+            move_counter = 1
+            for move in moves:
+                # Avoid any terminal clearing in server/headless mode
+                self.engine.set_position(self.get_board_move_history_uci())
+                self.engine.set_depth(self.review_depth)
+                pre_move_analysis = self.engine.analyze_position()
+
+                current_player_name = "White" if self.board.turn == chess.WHITE else "Black"
+                self.board.push(move)
+
+                self.engine.set_position(self.get_board_move_history_uci())
+                self.engine.set_depth(self.review_depth)
+                post_move_analysis = self.engine.analyze_position()
+
+                # Render only if not headless
+                self.display_board_for_review(post_move_analysis)
+
+                comment = self._generate_comment(pre_move_analysis, post_move_analysis, move.uci())
+
+                review_data.append({
+                    "move_number": move_counter,
+                    "move": move.uci(),
+                    "player": current_player_name,
+                    "pre_eval": {
+                        "score": pre_move_analysis['score'],
+                        "is_mate": pre_move_analysis['is_mate'],
+                        "formatted": format_score(pre_move_analysis['score'], pre_move_analysis['is_mate'])
+                    },
+                    "post_eval": {
+                        "score": post_move_analysis['score'],
+                        "is_mate": post_move_analysis['is_mate'],
+                        "formatted": format_score(post_move_analysis['score'], post_move_analysis['is_mate'])
+                    },
+                    "best_move": pre_move_analysis['best_move'],
+                    "pv": format_pv(pre_move_analysis['pv'][:4]),
+                    "comment": comment
+                })
+
+                if pause and not self.headless:
+                    try:
+                        input("Press Enter to continue...")
+                    except Exception:
+                        pass
+                move_counter += 1
+
+            print("\n--- End of Game Review ---")
+            default_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
+            final_analysis = post_move_analysis if 'post_move_analysis' in locals() else default_analysis
+
+            # Final render only if not headless
+            self.display_board_for_review(final_analysis)
+            print(f"Final game result: {game_node.headers.get('Result', '*')}")
+
+            return review_data
 
         except FileNotFoundError:
             print(f"Error: PGN file not found at '{pgn_filepath}'.")
         except Exception as e:
-            # catch broad exceptions related to parsing/IO and report them.
             print(f"PGN parsing error: {e}")
-        except Exception as e:
-            print(f"An error occurred during PGN parsing or review: {e}")
         return review_data
 
     def clear_screen(self):
-        """Clear screen for review display."""
-        os.system('clear')
+        """No-op in headless/server environments to avoid TERM warnings."""
+        if self.headless:
+            return
+        try:
+            os.system('clear')
+        except Exception:
+            pass
