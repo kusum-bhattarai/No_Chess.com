@@ -7,7 +7,7 @@ import shutil
 import chess
 import chess.pgn
 import os
-import traceback 
+import traceback
 import random
 
 from .pgnReview import PgnReviewer
@@ -16,17 +16,22 @@ from .engine import StockfishEngine
 from .chess_game import ChessGame
 from fastapi.middleware.cors import CORSMiddleware
 
-sessions: Dict[str, Dict[str, Union[ChessGame, StockfishEngine, str]]] = {}
+SESSIONS: Dict[str, Dict] = {}  # { session_id: { "game": ChessGame, "engine": StockfishEngine, "user_color": "white"/"black" } }
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    yield
-    print("Shutting down and closing all Stockfish engines...")
-    for session_id, session_data in sessions.items():
-        engine = session_data.get("engine")
-        if engine:
-            print(f"Closing engine for session {session_id}")
-            engine.close()
+    try:
+        yield
+    finally:
+        print("Shutting down and closing all Stockfish engines...")
+        for session_id, session_data in list(SESSIONS.items()):
+            engine = session_data.get("engine")
+            if engine:
+                try:
+                    print(f"Closing engine for session {session_id}")
+                    engine.quit()
+                except Exception:
+                    pass
 
 app = FastAPI(title="NoChess API", description="Terminal Chess to Web", version="0.1.0", lifespan=lifespan)
 
@@ -44,9 +49,9 @@ app.add_middleware(
 )
 
 def get_session_data(session_id: str) -> Dict:
-    if session_id not in sessions:
+    if session_id not in SESSIONS:
         raise HTTPException(status_code=404, detail="Session not found")
-    return sessions[session_id]
+    return SESSIONS[session_id]
 
 def get_game(session_data: Dict = Depends(get_session_data)) -> ChessGame:
     return session_data["game"]
@@ -61,10 +66,11 @@ def start_game(request: StartGameRequest):
         mode_str = request.mode.value if request.mode else "intermediate"
         print(f"Attempting to start Stockfish with mode: {mode_str}")
 
-        engine = StockfishEngine(mode=mode_str)
+        engine = StockfishEngine()  # no mode arg
         game = ChessGame()
         print("Stockfish engine initialized successfully.")
 
+        # Initial analysis
         moves = game.get_move_history_uci()
         engine.set_position(moves)
         analysis = engine.analyze_position()
@@ -81,7 +87,7 @@ def start_game(request: StartGameRequest):
                 analysis = engine.analyze_position()
                 game.set_analysis(analysis)
 
-        sessions[session_id] = {"game": game, "engine": engine, "user_color": user_color}
+        SESSIONS[session_id] = {"game": game, "engine": engine, "user_color": user_color}
         print(f"New session created: {session_id}")
 
         state = game.get_state_json()
@@ -94,33 +100,71 @@ def start_game(request: StartGameRequest):
         print("--------------------------\n")
         raise HTTPException(status_code=500, detail=f"Failed to start game: {str(e)}")
 
-@app.post("/make_move/{session_id}", response_model=GameStateResponse)
-def make_move(session_id: str, request: MoveRequest, game: ChessGame = Depends(get_game), engine: StockfishEngine = Depends(get_engine)):
+def _collect_state(session_id: str, game: ChessGame, engine: StockfishEngine, user_color: str) -> GameStateResponse:
+    status = game.game_status()
     try:
-        if game.make_move(request.move):
+        moves = game.get_move_history_uci()
+        engine.set_position(moves)
+        analysis = engine.analyze_position()
+    except Exception:
+        analysis = None
+
+    return GameStateResponse(
+        session_id=session_id,
+        fen=game.fen(),
+        turn=game.turn_color(),
+        legal_moves=game.legal_moves_uci(),
+        analysis=analysis,
+        game_over=status["game_over"],
+        result=status["result"],
+        status=status["status"],
+        user_color=user_color,
+        in_check=status["in_check"],
+        in_checkmate=status["in_checkmate"],
+        in_stalemate=status["in_stalemate"],
+        is_draw=status["is_draw"],
+        draw_reason=status["draw_reason"],
+        last_move=(game.last_move.uci() if game.last_move else None),
+    )
+
+def _engine_reply_if_needed(game: ChessGame, engine: StockfishEngine, user_color: str):
+    # If it's engine's turn, make one best-move reply
+    if game.turn_color() != user_color and not game.board.is_game_over():
+        moves = game.get_move_history_uci()
+        engine.set_position(moves)
+        analysis = engine.analyze_position()
+        best_move = analysis.get("best_move")
+        if best_move and best_move != "(none)":
+            game.make_move(best_move)
+            # Optional: refresh analysis after engine move (state collector will also do it)
             moves = game.get_move_history_uci()
             engine.set_position(moves)
-            analysis = engine.analyze_position()
-            game.set_analysis(analysis)
+            new_analysis = engine.analyze_position()
+            game.set_analysis(new_analysis)
 
-            if not game.is_game_over() and game.board.turn == chess.BLACK:
-                best_move = analysis.get("best_move")
-                if best_move and best_move != "(none)":
-                    game.make_move(best_move)
-                    moves = game.get_move_history_uci()
-                    engine.set_position(moves)
-                    analysis = engine.analyze_position()
-                    game.set_analysis(analysis)
+@app.post("/make_move/{session_id}", response_model=GameStateResponse)
+def make_move(session_id: str, req: MoveRequest):
+    if session_id not in SESSIONS:
+        raise HTTPException(status_code=404, detail="Unknown session")
 
-            state = game.get_state_json()
-            state["session_id"] = session_id
-            session_data = sessions.get(session_id, {})
-            state["user_color"] = session_data.get("user_color")
-            return state
-        else:
-            raise HTTPException(status_code=400, detail="Invalid move")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Move failed: {str(e)}")
+    ctx = SESSIONS[session_id]
+    game: ChessGame = ctx["game"]
+    engine: StockfishEngine = ctx["engine"]
+    user_color: str = ctx["user_color"]
+
+    if game.board.is_game_over():
+        return _collect_state(session_id, game, engine, user_color)
+
+    ok = game.apply_uci_move(req.move)
+    if not ok:
+        state = _collect_state(session_id, game, engine, user_color)
+        state.status = f"Illegal move: {req.move}"
+        return state
+
+    # Let engine reply once if it's engine's turn
+    _engine_reply_if_needed(game, engine, user_color)
+
+    return _collect_state(session_id, game, engine, user_color)
 
 @app.get("/analyze/{session_id}", response_model=AnalysisResponse)
 def analyze(session_id: str, game: ChessGame = Depends(get_game), engine: StockfishEngine = Depends(get_engine)):
@@ -137,19 +181,30 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
     try:
         session_data = get_session_data(session_id)
-        game = session_data["game"]
-        engine = session_data["engine"]
+        game: ChessGame = session_data["game"]
+        engine: StockfishEngine = session_data["engine"]
+
+        # Immediate snapshot
+        try:
+            moves = game.get_move_history_uci()
+            engine.set_position(moves)
+            analysis = engine.analyze_position()
+            game.set_analysis(analysis)
+            await websocket.send_json(analysis)
+        except Exception as e:
+            print(f"Initial WS send error for session {session_id}: {e}")
+
+        # Periodic updates
         while True:
             moves = game.get_move_history_uci()
             engine.set_position(moves)
             analysis = engine.analyze_position()
             game.set_analysis(analysis)
             await websocket.send_json(analysis)
-            await asyncio.sleep(1)
+            await asyncio.sleep(1.0)
     except WebSocketDisconnect:
         print(f"Client disconnected from session {session_id}")
     except Exception as e:
-        # Avoid explicit close to prevent incompatibility issues between uvicorn/starlette/websockets
         print(f"An error occurred in the websocket for session {session_id}: {e}")
         return
 
@@ -204,7 +259,6 @@ def restart(session_id: str):
     analysis = engine.analyze_position()
     game.set_analysis(analysis)
 
-    # Randomly reassign user color; if user is black, let AI (white) move first
     user_color = random.choice(["white", "black"])
     if user_color == "black":
         best_move = analysis.get("best_move")

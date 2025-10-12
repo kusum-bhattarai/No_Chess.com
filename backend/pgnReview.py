@@ -8,24 +8,18 @@ from .ui.terminal_ui import TerminalUI
 class PgnReviewer:
     def __init__(self, engine, quick_mode: bool = False, review_depth: int = 20):
         self.engine = engine
-        self.board = chess.Board()  # The board specifically for review purposes
-        self.ui = TerminalUI()  # Reuse shared UI for display
+        self.board = chess.Board()
+        self.ui = TerminalUI()
         self.quick_mode = quick_mode
         self.review_depth = 10 if quick_mode else review_depth
 
     def display_board_for_review(self, analysis: Dict):
-        """
-        Displays the board state during review, including the evaluation bar.
-        Delegates to TerminalUI for consistency.
-        """
         self.ui.display_board(self.board, analysis, clear=True)
 
     def get_board_move_history_uci(self):
-        """Helper to get move history for the review board."""
         return [move.uci() for move in self.board.move_stack]
 
     def _generate_comment(self, pre_analysis: Dict, post_analysis: Dict, move_uci: str) -> str:
-        """Generate comment with standard keywords."""
         pre_best = pre_analysis.get('best_move')
         pre_is_mate = pre_analysis.get('is_mate')
         post_is_mate = post_analysis.get('is_mate')
@@ -35,7 +29,6 @@ class PgnReviewer:
 
         if not pre_best or move_uci == pre_best:
             return "Best: Matches engine recommendation."
-        
         if pre_is_mate and not post_is_mate:
             return "Blunder: Missed a forced mate."
         if post_score > pre_score + 100:
@@ -88,7 +81,6 @@ class PgnReviewer:
 
                 self.display_board_for_review(post_move_analysis)
 
-                from .utils import format_score, format_pv
                 comment = self._generate_comment(pre_move_analysis, post_move_analysis, move.uci())
 
                 review_data.append({
@@ -130,5 +122,4 @@ class PgnReviewer:
         return review_data
 
     def clear_screen(self):
-        """Clear screen for review display."""
         os.system('clear')

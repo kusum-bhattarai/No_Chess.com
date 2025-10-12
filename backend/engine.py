@@ -1,75 +1,52 @@
+from typing import Dict, List, Optional
+import os
 import chess
 import chess.engine
-from typing import List, Dict
 
 class StockfishEngine:
-    def __init__(self, mode: str = "intermediate"):
-        try:
-            self.engine = chess.engine.SimpleEngine.popen_uci("stockfish")
-        except FileNotFoundError:
-            raise OSError(
-                "Stockfish binary not found in PATH. "
-                "Ensure the 'stockfish' package is installed in the Docker image."
-            )
-
-        # Configure skill level
-        skill_map = {
-            "beginner": 5,
-            "intermediate": 10,
-            "advanced": 20
-        }
-        skill_level = skill_map.get(mode, 10)
-        self.engine.configure({"Skill Level": skill_level})
-
-        # Set analysis depth for this session
-        depth_map = {
-            "beginner": 8,
-            "intermediate": 12,
-            "advanced": 16
-        }
-        depth = depth_map.get(mode, 12)
+    def __init__(self, engine_path: Optional[str] = None, depth: int = 12):
+        # Resolve engine binary path from env or default to 'stockfish' in PATH
+        if engine_path is None:
+            engine_path = os.getenv("STOCKFISH_PATH", "stockfish")
+        self.engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+        self.board = chess.Board()
         self.depth_limit = chess.engine.Limit(depth=depth)
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
+    def __exit__(self, exc_type, exc, tb):
+        self.quit()
 
-    def close(self):
-        """A dedicated method to properly close the engine process."""
-        self.engine.quit()
-
-    def set_position(self, moves: List[str]):
-        """Creates a board and plays the given moves to set the position."""
+    def set_position(self, uci_moves: List[str]):
         self.board = chess.Board()
-        for move in moves:
-            try:
-                self.board.push_uci(move)
-            except ValueError:
-                print(f"Invalid move '{move}' in history, skipping.")
+        for u in uci_moves:
+            self.board.push_uci(u)
 
-    def analyze_position(self) -> Dict:
-        """Analyzes the current board position and returns the results."""
-        # The python-chess library handles the analysis loop internally
-        info = self.engine.analyse(self.board, self.depth_limit)
-
-        score = info.get("score")
-        pv = info.get("pv", [])
-
-        is_mate = score.is_mate()
-        if is_mate:
-            score_value = score.mate()
-        else:
-            score_value = score.relative.cp
-
-        return {
-            "score": score_value,
-            "is_mate": is_mate,
-            "best_move": pv[0].uci() if pv else None,
-            "pv": [move.uci() for move in pv],
-            "depth": info.get("depth"),
-        }
-    
     def set_depth(self, depth: int):
         self.depth_limit = chess.engine.Limit(depth=depth)
+
+    def analyze_position(self) -> Dict:
+        info = self.engine.analyse(self.board, self.depth_limit)
+        pov = info.get("score")
+        pv = info.get("pv", [])
+        rel = pov.relative if pov else None
+        is_mate = bool(rel and rel.is_mate())
+        if is_mate:
+            score_value = rel.mate()
+        else:
+            score_value = rel.cp if rel else 0
+
+        return {
+            "score": int(score_value or 0),
+            "is_mate": is_mate,
+            "best_move": pv[0].uci() if pv else None,
+            "pv": [m.uci() for m in pv],
+            "depth": info.get("depth", None),
+        }
+
+    def quit(self):
+        try:
+            self.engine.quit()
+        except Exception:
+            pass
