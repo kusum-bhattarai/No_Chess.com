@@ -8,6 +8,7 @@ import chess
 import chess.pgn
 import os
 import traceback 
+import random
 
 from .pgnReview import PgnReviewer
 from .models import Mode, MoveRequest, StartGameRequest, AnalysisResponse, GameStateResponse, PgnReviewResponse
@@ -15,7 +16,7 @@ from .engine import StockfishEngine
 from .chess_game import ChessGame
 from fastapi.middleware.cors import CORSMiddleware
 
-sessions: Dict[str, Dict[str, Union[ChessGame, StockfishEngine]]] = {}
+sessions: Dict[str, Dict[str, Union[ChessGame, StockfishEngine, str]]] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -69,11 +70,23 @@ def start_game(request: StartGameRequest):
         analysis = engine.analyze_position()
         game.set_analysis(analysis)
 
-        sessions[session_id] = {"game": game, "engine": engine}
+        # Randomly assign user color; if user is black, AI (white) moves first
+        user_color = random.choice(["white", "black"])
+        if user_color == "black":
+            best_move = analysis.get("best_move")
+            if best_move and best_move != "(none)":
+                game.make_move(best_move)
+                moves = game.get_move_history_uci()
+                engine.set_position(moves)
+                analysis = engine.analyze_position()
+                game.set_analysis(analysis)
+
+        sessions[session_id] = {"game": game, "engine": engine, "user_color": user_color}
         print(f"New session created: {session_id}")
 
         state = game.get_state_json()
         state["session_id"] = session_id
+        state["user_color"] = user_color
         return state
     except Exception as e:
         print("\n--- ERROR IN /start_game ---")
@@ -101,6 +114,8 @@ def make_move(session_id: str, request: MoveRequest, game: ChessGame = Depends(g
 
             state = game.get_state_json()
             state["session_id"] = session_id
+            session_data = sessions.get(session_id, {})
+            state["user_color"] = session_data.get("user_color")
             return state
         else:
             raise HTTPException(status_code=400, detail="Invalid move")
@@ -134,18 +149,19 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     except WebSocketDisconnect:
         print(f"Client disconnected from session {session_id}")
     except Exception as e:
-        print(f"An error occurred in the websocket: {e}")
-        await websocket.close(code=1011)
+        # Avoid explicit close to prevent incompatibility issues between uvicorn/starlette/websockets
+        print(f"An error occurred in the websocket for session {session_id}: {e}")
+        return
 
 @app.post("/review_pgn", response_model=PgnReviewResponse)
-def review_pgn(pgn_file: UploadFile = File(...)):
+def review_pgn(pgn_file: UploadFile = File(...), quick_mode: bool = False):
     file_path = f"/tmp/{pgn_file.filename}"
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(pgn_file.file, buffer)
     try:
         with StockfishEngine() as engine:
             reviewer = PgnReviewer(engine)
-            review_data = reviewer.perform_review(file_path)
+            review_data = reviewer.perform_review(file_path, quick_mode=quick_mode)
             with open(file_path) as pgn:
                 game = chess.pgn.read_game(pgn)
                 headers = game.headers if game else {}
@@ -165,3 +181,42 @@ def review_pgn(pgn_file: UploadFile = File(...)):
 @app.get("/")
 def read_root():
     return {"message": "NoChess API is running"}
+
+@app.post("/resign/{session_id}", response_model=GameStateResponse)
+def resign(session_id: str):
+    session_data = get_session_data(session_id)
+    game: ChessGame = session_data["game"]
+    user_color: str = session_data.get("user_color", "white")
+    game.resign(user_color)
+    state = game.get_state_json()
+    state["session_id"] = session_id
+    state["user_color"] = user_color
+    return state
+
+@app.post("/restart/{session_id}", response_model=GameStateResponse)
+def restart(session_id: str):
+    session_data = get_session_data(session_id)
+    game: ChessGame = session_data["game"]
+    engine: StockfishEngine = session_data["engine"]
+
+    game.restart()
+    engine.set_position([])
+    analysis = engine.analyze_position()
+    game.set_analysis(analysis)
+
+    # Randomly reassign user color; if user is black, let AI (white) move first
+    user_color = random.choice(["white", "black"])
+    if user_color == "black":
+        best_move = analysis.get("best_move")
+        if best_move and best_move != "(none)":
+            game.make_move(best_move)
+            moves = game.get_move_history_uci()
+            engine.set_position(moves)
+            analysis = engine.analyze_position()
+            game.set_analysis(analysis)
+
+    session_data["user_color"] = user_color
+    state = game.get_state_json()
+    state["session_id"] = session_id
+    state["user_color"] = user_color
+    return state

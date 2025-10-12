@@ -70,3 +70,6 @@ class StockfishEngine:
             "pv": [move.uci() for move in pv],
             "depth": info.get("depth"),
         }
+    
+    def set_depth(self, depth: int):
+        self.depth_limit = chess.engine.Limit(depth=depth)

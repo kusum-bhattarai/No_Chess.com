@@ -16,6 +16,24 @@ class ChessGame:
         # Piece symbols for legal moves print
         self.piece_symbols = get_piece_symbols()
 
+        self.resign_result = None  # e.g., "White resigns. Black wins."
+
+    def resign(self, by_color: str):
+        if by_color not in ("white", "black"):
+            return False
+        if by_color == "white":
+            self.resign_result = "White resigns. Black wins."
+        else:
+            self.resign_result = "Black resigns. White wins."
+        return True
+
+    def restart(self):
+        self.board = chess.Board()
+        self.move_history.clear()
+        self.current_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
+        self.resign_result = None
+        self.display_board()
+
     # Sets the analysis data
     def set_analysis(self, analysis: Dict):
         self.current_analysis = analysis
@@ -108,6 +126,8 @@ class ChessGame:
             print(f"{piece_symbol} {start} → {', '.join(ends)}")
 
     def get_game_result(self):
+        if self.resign_result:
+            return self.resign_result
         if self.board.is_checkmate():
             winner = "Black" if self.board.turn else "White"
             return f"Checkmate! {winner} wins."
@@ -127,7 +147,7 @@ class ChessGame:
         return None
 
     def is_game_over(self):
-        return self.board.is_game_over()
+        return self.resign_result is not None or self.board.is_game_over()
 
     def get_fen(self):
         return self.board.fen()

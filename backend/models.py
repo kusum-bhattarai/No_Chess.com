@@ -28,6 +28,7 @@ class GameStateResponse(BaseModel):
     analysis: Dict
     game_over: bool
     result: Optional[str] = None
+    user_color: Optional[str] = None  # "white" or "black"
 
 class ReviewMove(BaseModel):
     move_number: int
