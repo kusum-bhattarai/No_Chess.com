@@ -1,6 +1,7 @@
 import chess
 import chess.pgn
 import os
+import sys
 from typing import List, Dict
 from .utils import format_score, format_pv
 from .ui.terminal_ui import TerminalUI
@@ -8,18 +9,34 @@ from .ui.terminal_ui import TerminalUI
 class PgnReviewer:
     def __init__(self, engine, quick_mode: bool = False, review_depth: int = 20):
         self.engine = engine
-        self.board = chess.Board()
-        self.ui = TerminalUI()
+        self.board = chess.Board()  # The board specifically for review purposes
+        self.ui = TerminalUI()      # Reuse shared UI for display
         self.quick_mode = quick_mode
         self.review_depth = 10 if quick_mode else review_depth
 
+        # Headless/server mode detection: no terminal → suppress clear/terminal UI
+        term = os.getenv("TERM", "")
+        self.headless = (not term or term == "dumb" or not sys.stdout.isatty())
+
     def display_board_for_review(self, analysis: Dict):
-        self.ui.display_board(self.board, analysis, clear=True)
+        """
+        Displays the board state during review, including the evaluation bar.
+        In headless/server environments, this is a no-op to avoid TERM warnings.
+        """
+        if self.headless:
+            return
+        try:
+            self.ui.display_board(self.board, analysis, clear=True)
+        except Exception:
+            # Never let terminal UI failures affect API behavior
+            pass
 
     def get_board_move_history_uci(self):
+        """Helper to get move history for the review board."""
         return [move.uci() for move in self.board.move_stack]
 
     def _generate_comment(self, pre_analysis: Dict, post_analysis: Dict, move_uci: str) -> str:
+        """Generate comment with standard keywords."""
         pre_best = pre_analysis.get('best_move')
         pre_is_mate = pre_analysis.get('is_mate')
         post_is_mate = post_analysis.get('is_mate')
@@ -66,8 +83,7 @@ class PgnReviewer:
             self.board = chess.Board()
             move_counter = 1
             for move in moves:
-                self.clear_screen()
-
+                # Avoid any terminal clearing in server/headless mode
                 self.engine.set_position(self.get_board_move_history_uci())
                 self.engine.set_depth(self.review_depth)
                 pre_move_analysis = self.engine.analyze_position()
@@ -79,6 +95,7 @@ class PgnReviewer:
                 self.engine.set_depth(self.review_depth)
                 post_move_analysis = self.engine.analyze_position()
 
+                # Render only if not headless
                 self.display_board_for_review(post_move_analysis)
 
                 comment = self._generate_comment(pre_move_analysis, post_move_analysis, move.uci())
@@ -102,14 +119,18 @@ class PgnReviewer:
                     "comment": comment
                 })
 
-                if pause:
-                    input("Press Enter to continue...")
+                if pause and not self.headless:
+                    try:
+                        input("Press Enter to continue...")
+                    except Exception:
+                        pass
                 move_counter += 1
 
             print("\n--- End of Game Review ---")
             default_analysis = {"score": 0, "is_mate": False, "best_move": None, "pv": [], "depth": 0}
             final_analysis = post_move_analysis if 'post_move_analysis' in locals() else default_analysis
-            self.clear_screen()
+
+            # Final render only if not headless
             self.display_board_for_review(final_analysis)
             print(f"Final game result: {game_node.headers.get('Result', '*')}")
 
@@ -122,4 +143,10 @@ class PgnReviewer:
         return review_data
 
     def clear_screen(self):
-        os.system('clear')
+        """No-op in headless/server environments to avoid TERM warnings."""
+        if self.headless:
+            return
+        try:
+            os.system('clear')
+        except Exception:
+            pass
