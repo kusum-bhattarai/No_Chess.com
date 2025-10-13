@@ -1,128 +1,135 @@
-# No_Chess.com
+# NoChess.com
 
-## Overview
-This is a simple terminal-based chess game implemented using the `python-chess` library. The game allows players to view the board, make legal moves, and check for conditions like check, checkmate, and stalemate. It is designed for fun and learning,capable of giving move recommendations and analysis. Since chess.com only allows one free game review per day, this will help beginners analyze, review and mess with as many games as they want. (Beginners like me lol)
+A modern chess web app with a React frontend and FastAPI backend powered by Stockfish. Play against the engine, see real‑time evaluations, run on‑demand analysis, and unlimited review (unlike chess.com's paywall) for PGN files with chess.com‑style review comments.
+
+- Frontend: React (Vite) + react-chessboard
+- Backend: FastAPI + python‑chess + Stockfish
+- Live evaluation: WebSocket stream
+- PGN review: quick mode or full review with comments
+
+For full API reference, see the API documentation:
+- API docs: [API_DOCUMENTATION](API_DOCUMENTATION.md)
 
 ## Features
-- **Display Board:** Prints the chessboard in the terminal with Unicode piece symbols.
-- **Move Execution:** Allows users to enter moves in UCI (Universal Chess Interface) format.
-- **Move Validation:** Checks for legality and invalid move formats.
-- **Turn Tracking:** Indicates whose turn it is (White or Black).
-- **Check and Checkmate Detection:** Notifies the player if a check, checkmate, or stalemate occurs.
-- **Legal Moves Listing:** Displays all possible legal moves for the current position.
-- **Recommends moves from StockFish Engine:** Displays the best move recommended by StockFish engine based on current board state.
-- **Analyzes current position:** Analyzes current move and position and gives back user friendly analysis from StockFish's response.
-- **Live Evaluation:** Evaluation bar showing position advantage along with the score.
-- **PGN Game Review:** Import your PGN games for a move-by-move Stockfish analysis and review, similar to Chess.com's game review feature.
+
+- Play vs AI (engine replies automatically)
+- Real-time evaluation bar via WebSocket
+- On-demand analysis (best move, PV, depth)
+- PGN review with “Brilliant/Mistake/Blunder/…” comments
+- Resign and restart controls
+- Random user color assignment (white/black) on start/restart
+- Robust game state: FEN, status flags, last move, legal moves
+
+## Architecture
+
+- Frontend (default: http://localhost:5173)
+  - React + Vite, chessboard UI, WebSocket evaluation bar
+- Backend (default: http://localhost:8000)
+  - FastAPI service, Stockfish engine controller, session manager
+- Engine
+  - Stockfish (resolved via STOCKFISH_PATH or found in PATH)
+
+CORS is enabled for the frontend origin(s) on 5173.
 
 ## Prerequisites
-Ensure you have Python installed on your system. Create a virtual environment and install the dependencies using:  
-```
-pip install -r requirements.txt
-```
 
-### Project Structure
+- Node.js 18+ and npm (or pnpm/yarn)
+- Python 3.10+
+- Stockfish chess engine installed and accessible:
+  - macOS: `brew install stockfish`
+  - Ubuntu/Debian: `sudo apt-get install stockfish`
+  - Windows: install and add to PATH (Scoop/Choco or manual)
+- Optional: Docker/Docker Compose (if you prefer containers)
 
-- main.py: The main entry point for the game and user interaction.
-- chess_game.py: Handles the core logic for interactive chess games.
-- engine.py: Manages communication with the Stockfish chess engine.
-- pgn_reviewer.py: Contains the logic for parsing PGN files and providing move-by-move game reviews.
-- utils.py: Provides utility functions for formatting and displaying game data.
-- requirements.txt: Lists the Python dependencies.
+Set the engine path if not in PATH:
+- macOS/Linux: `export STOCKFISH_PATH=/usr/local/bin/stockfish`
+- Windows (PowerShell): `$env:STOCKFISH_PATH="C:\\path\\to\\stockfish.exe"`
 
-## How to Use
-### Running the Game
-1. Clone or download the script.
-2. Open a terminal and navigate to the script's directory.
-3. Run the script using:
-   ```sh
-   python main.py
-   ```
+## Configuration
 
-### Example Gameplay (Interactive)
-```
-            a  b  c  d  e  f  g  h
-          +------------------------+
-░      | 8| ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜  |8
-░      | 7| ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟  |7
-░      | 6| ·  ·  ·  ·  ·  ·  ·  ·  |6
-░ 0.00 | 5| ·  ·  ·  ·  ·  ·  ·  ·  |5
-█      | 4| ·  ·  ·  ·  ·  ·  ·  ·  |4
-█      | 3| ·  ·  ·  ·  ·  ·  ·  ·  |3
-█      | 2| ♙  ♙  ♙  ♙  ♙  ♙  ♙  ♙  |2
-█      | 1| ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖  |1
-          +------------------------+
-            a  b  c  d  e  f  g  h
+Frontend (Vite):
+- `VITE_API_BASE_URL` (optional; default `http://localhost:8000`)
+- `VITE_WS_BASE_URL` (optional; default `ws://localhost:8000`)
 
-Current turn: White
-Moves played: 0
+Backend:
+- `STOCKFISH_PATH` (optional; default `stockfish` in PATH)
 
-Your move (or 'recommend', 'analyze', 'help'): 
-```
+## Getting Started (Local Dev)
 
-### Available Commands
-```
-Available commands:
-  e2e4, g1f3, etc.    - Make a move directly using UCI notation
-  recommend           - Get Stockfish's recommended move
-  analyze             - Analyze current position
-  undo                - Undo the last move
-  legal               - Show all legal moves
-  fen                 - Show current position's FEN string
-  load [fen]          - Load a position from a FEN string
-  help                - Show this help message
-  quit                - Exit the game
-```
+1) Backend
+- Create and activate a virtual environment (recommended)
+- Install dependencies (example):
+  ```bash
+  pip install fastapi uvicorn python-chess
+  ```
+  If you have a `requirements.txt`, use:
+  ```bash
+  pip install -r requirements.txt
+  ```
+- Run the server:
+  ```bash
+  uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
+  ```
+  The backend will resolve Stockfish from `STOCKFISH_PATH` or PATH.
 
-### Recommend Command Output:
-```
-Your move (or 'recommend', 'analyze', 'help'): recommend
-Stockfish recommends: b1c3
-Make this move? (y/n):
+2) Frontend
+- From the frontend directory:
+  ```bash
+  npm install
+  npm run dev
+  ```
+- Open http://localhost:5173
 
+## Docker (Optional)
+
+If you have a Dockerfile for the backend:
+```bash
+docker build -t nochess-backend .
+docker run --rm -p 8000:8000 \
+  -e STOCKFISH_PATH=/usr/bin/stockfish \
+  nochess-backend
 ```
 
-### Analysis Command Output:
-```
-Stockfish Analysis:
-Depth: 20
-Evaluation: 0.28
-Best move: d2d4
-Line: d2d4 e5d4 d1d4 b8c6 d4d4 d4d4 d4d4 c6c6
-Position: The position is roughly equal.
+Ensure the container has Stockfish installed (either in the image or mounted).
+
+## Project Structure (typical)
 
 ```
-
-### Example PGN Review Output
-```
---- PGN Game Review: My Online Game ---
-White: PlayerA vs. Black: PlayerB
-Result: 1-0
-
-            a  b  c  d  e  f  g  h
-          +------------------------+
-░      | 8| ♜  ♞  ♝  ♛  ♚  ♝  ♞  ♜  |8
-░      | 7| ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟  |7
-░      | 6| ·  ·  ·  ·  ·  ·  ·  ·  |6
-░ 0.15 | 5| ·  ·  ·  ·  ·  ·  ·  ·  |5
-█      | 4| ·  ·  ·  ♙  ·  ·  ·  ·  |4
-█      | 3| ·  ·  ·  ·  ·  ·  ·  ·  |3
-█      | 2| ♙  ♙  ♙  ·  ♙  ♙  ♙  ♙  |2
-█      | 1| ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖  |1
-          +------------------------+
-            a  b  c  d  e  f  g  h
-
---- Move 1. White plays e2e4 ---
-Evaluation before move: 0.00
-Stockfish's Best Move (pre-move): e2e4
-Line (after Stockfish's best): e4 e5 Nf3 Nc6
-Evaluation after move: 0.05
-Comment: Excellent move! Matches Stockfish's top recommendation.
-Press Enter to continue to the next move review...
-
+backend/
+  app.py
+  engine.py
+  chess_game.py
+  models.py
+  pgnReview.py
+  utils.py
+  ui/terminal_ui.py
+frontend/
+  src/
+    components/
+    styles/
+    api.js (or api/index.js)
 ```
 
-## Future Enhancements
-- Add different modes (Astro-chess, Superhero-chess) for players to have fun with.
-- Implement GUI for better visualization.
-- Support PGN export.
+## Development Notes
+
+- The engine is analyzed at a configurable depth internally. The WebSocket stream emits the latest analysis ~1s cadence.
+- PGN review supports quick mode (faster, lower depth) and normal mode (deeper).
+- In headless environments (e.g., Docker), terminal UI calls are automatically disabled to avoid TERM warnings.
+
+## Troubleshooting
+
+- Engine not found
+  - Set `STOCKFISH_PATH` or install Stockfish into PATH.
+- WebSocket disconnects
+  - Ensure `VITE_WS_BASE_URL` matches the backend host and protocol (`ws://` for local, `wss://` for TLS).
+
+## License
+
+Add your license here.
+
+## Acknowledgements
+
+- [python-chess](https://python-chess.readthedocs.io/)
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [react-chessboard](https://github.com/Clariity/react-chessboard)
+- Stockfish authors and contributors
